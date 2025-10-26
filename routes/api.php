@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\WaitingListController;
+use App\Models\WaitingList;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -9,6 +10,9 @@ use Illuminate\Support\Facades\Route;
 // Public routes
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
+Route::get('/test', function () {
+    return WaitingList::all();
+});
 
 Route::post('/waiting-list', [WaitingListController::class, 'store']);
 Route::get('/waiting-list', [WaitingListController::class, 'index']);
