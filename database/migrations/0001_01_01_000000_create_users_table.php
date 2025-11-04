@@ -15,13 +15,13 @@ return new class extends Migration
             $table->id();
             $table->string('full_name');
             $table->string('email')->unique();
-            $table->string('phone')->unique();
+            $table->string('phone')->unique()->nullable();
             $table->timestamp('email_verified_at')->nullable();
             $table->string('password');
-            $table->string('category');
-            $table->string('specialisation');
-            $table->string('institution');
-            $table->string('license_number')->unique();
+            $table->string('category')->nullable();
+            $table->string('specialisation')->nullable();
+            $table->string('institution')->nullable();
+            $table->string('license_number')->unique()->nullable();
             $table->enum('approval_status', ['pending', 'approved', 'rejected'])->default('pending');
             $table->enum('status', ['active', 'inactive'])->default('active');
             $table->rememberToken();
