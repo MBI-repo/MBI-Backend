@@ -47,7 +47,7 @@ Route::middleware('auth:sanctum')->group(function () {
 Route::prefix('v1')->group(function () {
     // Route::get('/events', [EventsController::class, 'index']);
     Route::get('/events/{id}', [EventsController::class, 'show']);
-    Route::get('/events/fetchall', [EventsController::class, 'fetchAll']);
+    Route::get('/fetch-all-events', [EventsController::class, 'fetchAll']);
 });
 
 // v1 Messaging & Groups API
