@@ -20,6 +20,10 @@ Route::group(['prefix' => 'user'], function () {
     Route::get('/', [AuthController::class, 'user'])->name('fetchUser');
 });
 
+Route::get('/events/{id}', [EventsController::class, 'show']);
+// v1 Events - public GET
+Route::get('/events/fetchall', [EventsController::class, 'fetchAll']);
+
 
 Route::group(['prefix' => 'mbi'], function () {
     Route::post('contact-us/save', [HomepageController::class, 'saveContact'])->name('saveContact');
@@ -43,12 +47,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
 });
 
-// v1 Events - public GET
-Route::prefix('v1')->group(function () {
-    // Route::get('/events', [EventsController::class, 'index']);
-    Route::get('/events/{id}', [EventsController::class, 'show']);
-    Route::get('/events/fetchAll', [EventsController::class, 'fetchAll']);
-});
+
 
 // v1 Messaging & Groups API
 Route::middleware('auth:sanctum')->prefix('v1')->group(function () {
