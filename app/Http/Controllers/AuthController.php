@@ -131,4 +131,6 @@ class AuthController extends Controller
             'data' => $request->user()
         ]);
     }
+
+    
 }
