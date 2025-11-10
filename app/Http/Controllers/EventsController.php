@@ -63,7 +63,7 @@ class EventsController extends Controller
     public function fetchAll()
     {
         try {
-            $events = Event::latest()->getDirty();
+            $events = Event::latest()->get();
             return response()->json([
                 'success' => true,
                 'message' => 'Event fetched successfully',
