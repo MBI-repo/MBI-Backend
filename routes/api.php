@@ -16,23 +16,23 @@ use Illuminate\Support\Facades\Route;
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
 
-Route::group(['prefix' => 'user'], function() {
-    Route::get('/', [AuthController::class,'user'])->name('fetchUser');
+Route::group(['prefix' => 'user'], function () {
+    Route::get('/', [AuthController::class, 'user'])->name('fetchUser');
 });
 
 
-Route::group(['prefix' => 'mbi'], function() {
-    Route::post('contact-us/save', [HomepageController::class,'saveContact'])->name('saveContact');
-    Route::get('contact-us/fetch/{id}', [HomepageController::class,'fetchC ontact'])->name('fetchContact');
-    Route::get('contact-us/fetchall', [HomepageController::class,'fetchAllContact'])->name('fetchAllContact');
-    
-    Route::post('newsletter/save', [HomepageController::class,'saveNewsletter'])->name('saveNewsletter');
-    Route::get('newsletter/fetch/{id}', [HomepageController::class,'fetchNewsletter'])->name('fetchNewsletter');
-    Route::get('newsletter/fetchall', [HomepageController::class,'fetchAllNewsletter'])->name('fetchAllNewsletter');
+Route::group(['prefix' => 'mbi'], function () {
+    Route::post('contact-us/save', [HomepageController::class, 'saveContact'])->name('saveContact');
+    Route::get('contact-us/fetch/{id}', [HomepageController::class, 'fetchC ontact'])->name('fetchContact');
+    Route::get('contact-us/fetchall', [HomepageController::class, 'fetchAllContact'])->name('fetchAllContact');
 
-    Route::post('waiting-list/save', [HomepageController::class,'saveWaitingList'])->name('saveWaitingList');
-    Route::get('waiting-list/fetch/{id}', [HomepageController::class,'fetchWaitingList'])->name('fetchWaitingList');
-    Route::get('waiting-list/fetchall', [HomepageController::class,'fetchAllWaitingList'])->name('fetchAllWaitingList');
+    Route::post('newsletter/save', [HomepageController::class, 'saveNewsletter'])->name('saveNewsletter');
+    Route::get('newsletter/fetch/{id}', [HomepageController::class, 'fetchNewsletter'])->name('fetchNewsletter');
+    Route::get('newsletter/fetchall', [HomepageController::class, 'fetchAllNewsletter'])->name('fetchAllNewsletter');
+
+    Route::post('waiting-list/save', [HomepageController::class, 'saveWaitingList'])->name('saveWaitingList');
+    Route::get('waiting-list/fetch/{id}', [HomepageController::class, 'fetchWaitingList'])->name('fetchWaitingList');
+    Route::get('waiting-list/fetchall', [HomepageController::class, 'fetchAllWaitingList'])->name('fetchAllWaitingList');
 });
 
 
@@ -47,6 +47,7 @@ Route::middleware('auth:sanctum')->group(function () {
 Route::prefix('v1')->group(function () {
     Route::get('/events', [EventsController::class, 'index']);
     Route::get('/events/{id}', [EventsController::class, 'show']);
+    Route::get('/events/fetchAll/{id}', [EventsController::class, 'fetchAll']);
 });
 
 // v1 Messaging & Groups API
@@ -73,6 +74,7 @@ Route::middleware('auth:sanctum')->prefix('v1')->group(function () {
     // Events - protected write
     Route::post('/events', [EventsController::class, 'store']);
     Route::put('/events/{id}', [EventsController::class, 'update']);
-    Route::get('/events/fetch/{id}', [EventsController::class, 'show']);
+    Route::get('/events/{id}', [EventsController::class, 'show']);
+    Route::get('/events/fetchAll/{id}', [EventsController::class, 'fetchAll']);
     Route::delete('/events/{id}', [EventsController::class, 'destroy']);
 });

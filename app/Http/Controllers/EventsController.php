@@ -26,9 +26,9 @@ class EventsController extends Controller
         if ($q = $request->query('q')) {
             $query->where(function ($w) use ($q) {
                 $w->where('title', 'like', "%$q%")
-                  ->orWhere('description', 'like', "%$q%")
-                  ->orWhere('venue_name', 'like', "%$q%")
-                  ->orWhere('city', 'like', "%$q%");
+                    ->orWhere('description', 'like', "%$q%")
+                    ->orWhere('venue_name', 'like', "%$q%")
+                    ->orWhere('city', 'like', "%$q%");
             });
         }
         if ($from = $request->query('from')) {
@@ -45,8 +45,37 @@ class EventsController extends Controller
 
     public function show($id)
     {
-        $event = Event::findOrFail($id);
-        return response()->json(['event' => $event]);
+        try {
+            $event = Event::findOrFail($id);
+            return response()->json([
+                'success'=>true,
+                'message' => 'Event fetched successfully!',
+                'event' => $event]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Event fetch failed',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function fetchAll($id)
+    {
+        try {
+            $events = Event::get();
+            return response()->json([
+                'success' => true,
+                'message' => 'Event fetched successfully',
+                'events' => $events
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Event fetch failed',
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
 
     public function store(Request $request)
@@ -79,8 +108,8 @@ class EventsController extends Controller
             $et = $request->input('end_time');
             if ($sd && $st && $ed) {
                 try {
-                    $start = Carbon::parse($sd.' '.$st);
-                    $end = Carbon::parse($ed.' '.($et ?? '00:00'));
+                    $start = Carbon::parse($sd . ' ' . $st);
+                    $end = Carbon::parse($ed . ' ' . ($et ?? '00:00'));
                     if ($end->lt($start)) {
                         $v->errors()->add('end_date', 'End datetime must be after or equal to start datetime.');
                     }
@@ -100,14 +129,13 @@ class EventsController extends Controller
 
         $data = $validator->validated();
 
-        $startAt = Carbon::parse($data['start_date'].' '.$data['start_time']);
+        $startAt = Carbon::parse($data['start_date'] . ' ' . $data['start_time']);
         $endAt = null;
         if (!empty($data['end_date'])) {
-            $endAt = Carbon::parse($data['end_date'].' '.($data['end_time'] ?? '00:00'));
+            $endAt = Carbon::parse($data['end_date'] . ' ' . ($data['end_time'] ?? '00:00'));
         }
 
-        if($request->has('image')) {
-            
+        if ($request->has('image')) {
         }
 
         $event = Event::create([
@@ -140,10 +168,10 @@ class EventsController extends Controller
 
             $ext = $file->getClientOriginalExtension();
             $baseName = Str::slug($event->title);
-            $fileName = $baseName.'-'.time().($ext ? '.'.$ext : '');
+            $fileName = $baseName . '-' . time() . ($ext ? '.' . $ext : '');
             $file->move($uploadDir, $fileName);
 
-            $event->image_url = '/uploads/events/'.$fileName;
+            $event->image_url = '/uploads/events/' . $fileName;
             $event->save();
         }
 
@@ -185,8 +213,8 @@ class EventsController extends Controller
             $et = $request->input('end_time');
             if ($sd && $st && $ed) {
                 try {
-                    $start = Carbon::parse($sd.' '.$st);
-                    $end = Carbon::parse($ed.' '.($et ?? '00:00'));
+                    $start = Carbon::parse($sd . ' ' . $st);
+                    $end = Carbon::parse($ed . ' ' . ($et ?? '00:00'));
                     if ($end->lt($start)) {
                         $v->errors()->add('end_date', 'End datetime must be after or equal to start datetime.');
                     }
@@ -214,10 +242,10 @@ class EventsController extends Controller
         $startAt = $event->start_at;
         $endAt = $event->end_at;
         if (!empty($data['start_date']) && !empty($data['start_time'])) {
-            $startAt = Carbon::parse($data['start_date'].' '.$data['start_time']);
+            $startAt = Carbon::parse($data['start_date'] . ' ' . $data['start_time']);
         }
         if (!empty($data['end_date'])) {
-            $endAt = Carbon::parse($data['end_date'].' '.($data['end_time'] ?? '00:00'));
+            $endAt = Carbon::parse($data['end_date'] . ' ' . ($data['end_time'] ?? '00:00'));
         }
 
         $event->fill([
@@ -245,9 +273,9 @@ class EventsController extends Controller
             }
             $ext = $file->getClientOriginalExtension();
             $baseName = Str::slug($event->title);
-            $fileName = $baseName.'-'.time().($ext ? '.'.$ext : '');
+            $fileName = $baseName . '-' . time() . ($ext ? '.' . $ext : '');
             $file->move($uploadDir, $fileName);
-            $event->image_url = '/uploads/events/'.$fileName;
+            $event->image_url = '/uploads/events/' . $fileName;
         }
 
         $event->save();
@@ -258,6 +286,8 @@ class EventsController extends Controller
             'event' => $event
         ]);
     }
+
+
 
     public function destroy($id)
     {
@@ -277,7 +307,7 @@ class EventsController extends Controller
         $slug = $base;
         $i = 1;
         while (Event::where('slug', $slug)->exists()) {
-            $slug = $base.'-'.$i;
+            $slug = $base . '-' . $i;
             $i++;
         }
         return $slug;
