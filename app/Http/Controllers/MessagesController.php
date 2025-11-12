@@ -18,8 +18,7 @@ class MessagesController extends Controller
             'content' => ['nullable', 'string'],
             'conversationId' => ['required', 'integer', 'exists:conversations,id'],
             'messageType' => ['required', 'in:text,image,file,voicenote'],
-            'fileData.url' => ['nullable', 'url'],
-            'fileData.mimeType' => ['nullable', 'string'],
+            'file' => ['nullable'],
         ]);
 
         $conversation = Conversation::findOrFail($data['conversationId']);
@@ -29,11 +28,23 @@ class MessagesController extends Controller
             return response()->json(['message' => 'Forbidden'], 403);
         }
 
-        // For non-text message types, ensure fileData exists
-        if ($data['messageType'] !== 'text') {
-            if (empty($data['fileData']['url']) || empty($data['fileData']['mimeType'])) {
-                return response()->json(['message' => 'fileData.url and fileData.mimeType are required for non-text messages'], 422);
+        // Handle file upload to public folder and capture URL/MIME
+        $storedFileUrl = null;
+        $storedFileMime = null;
+        if ($request->hasFile('file')) {
+            $file = $request->file('file');
+            $uploadDir = public_path('uploads/messages');
+            if (!is_dir($uploadDir)) {
+                @mkdir($uploadDir, 0755, true);
             }
+            $ext = $file->getClientOriginalExtension();
+            $baseName = 'msg-'.$data['conversationId'].'-'.time();
+            $fileName = $baseName . ($ext ? '.'.$ext : '');
+            $file->move($uploadDir, $fileName);
+            $storedFileUrl = '/uploads/messages/'.$fileName;
+            $storedFileMime = $file->getClientMimeType();
+        } elseif ($data['messageType'] !== 'text') {
+            return response()->json(['message' => 'file is required for non-text messages'], 422);
         }
 
         $message = Message::create([
@@ -41,8 +52,8 @@ class MessagesController extends Controller
             'sender_id' => $user->id, // ignore senderId from body, use auth user
             'message_type' => $data['messageType'],
             'content' => $data['content'] ?? null,
-            'file_url' => $data['fileData']['url'] ?? null,
-            'file_mime_type' => $data['fileData']['mimeType'] ?? null,
+            'file_url' => $storedFileUrl,
+            'file_mime_type' => $storedFileMime,
         ]);
 
         // Touch conversation updated_at
@@ -98,6 +109,7 @@ class MessagesController extends Controller
         return response()->json([
             'messageId' => (string)$message->id,
             'status' => 'read',
+            'readAt' => $now,
         ]);
     }
 

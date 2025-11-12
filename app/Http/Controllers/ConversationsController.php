@@ -165,7 +165,7 @@ class ConversationsController extends Controller
             return response()->json(['message' => 'Forbidden'], 403);
         }
 
-        $fileTypes = ['image', 'file', 'voicenote'];
+        $fileTypes = ['image', 'file', 'voicenote','video'];
         $files = Message::where('conversation_id', $conversation->id)
             ->whereIn('message_type', $fileTypes)
             ->whereNotNull('file_url')
