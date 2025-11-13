@@ -38,10 +38,10 @@ class MessagesController extends Controller
                 @mkdir($uploadDir, 0755, true);
             }
             $ext = $file->getClientOriginalExtension();
-            $baseName = 'msg-'.$data['conversationId'].'-'.time();
-            $fileName = $baseName . ($ext ? '.'.$ext : '');
+            $baseName = 'msg-' . $data['conversationId'] . '-' . time();
+            $fileName = $baseName . ($ext ? '.' . $ext : '');
             $file->move($uploadDir, $fileName);
-            $storedFileUrl = '/uploads/messages/'.$fileName;
+            $storedFileUrl = '/uploads/messages/' . $fileName;
             $storedFileMime = $file->getClientMimeType();
         } elseif ($data['messageType'] !== 'text') {
             return response()->json(['message' => 'file is required for non-text messages'], 422);
@@ -95,10 +95,10 @@ class MessagesController extends Controller
         if (!$conversation->participants()->where('users.id', $user->id)->exists()) {
             return response()->json(['message' => 'Forbidden'], 403);
         }
-
+        $now = now();
         // Mark target message and all preceding messages (from other users) as read
         if ($message->sender_id !== $user->id) {
-            $now = now();
+
             Message::where('conversation_id', $conversation->id)
                 ->where('id', '<=', $message->id)
                 ->whereNull('read_at')
