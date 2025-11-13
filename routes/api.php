@@ -75,6 +75,6 @@ Route::middleware('auth:sanctum')->prefix('v1')->group(function () {
     Route::post('/events', [EventsController::class, 'store']);
     Route::put('/events/{id}', [EventsController::class, 'update']);
     // Route::get('/events/{id}', [EventsController::class, 'show']);
-    // Route::get('/events/fetchAll/{id}', [EventsController::class, 'fetchAll']);
+    Route::get('/events/fetchAllEvents/{id}', [EventsController::class, 'fetchAll']);
     Route::delete('/events/{id}', [EventsController::class, 'destroy']);
 });
