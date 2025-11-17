@@ -132,6 +132,14 @@ Identifiers: All resources now include both numeric `id` and `uuid`. Clients sho
       - For direct: `otherParticipant` { `id`, `uuid`, `full_name`, `email` }
       - For group: `memberCount`
 
+## WebSocket Events
+
+- Channel: `conversation.<conversationId>`
+- Events:
+  - `message.sent`: `{ message: { id, uuid, conversationId, senderId, messageType, content, fileData{url,mimeType}, readAt, createdAt } }`
+  - `message.deleted`: `{ messageUuid }`
+  - `message.read`: `{ messageUuid, readerUuid, readAt }`
+
 ## Notes
 
 - Private channels for WebSockets still use numeric `conversationId` in channel names. Clients should carry both `id` and `uuid` per conversation.

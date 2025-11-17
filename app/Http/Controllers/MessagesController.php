@@ -101,7 +101,7 @@ class MessagesController extends Controller
         $message->delete();
 
         // Broadcast deletion
-        broadcast(new MessageDeleted($conversation->id, (int)$message->id))->toOthers();
+        broadcast(new MessageDeleted($conversation->id, (string)$message->uuid))->toOthers();
 
         return response()->json([
             'messageId' => (string)$message->id,
@@ -134,7 +134,7 @@ class MessagesController extends Controller
                 ->update(['read_at' => $now]);
 
             // Broadcast read receipt
-            broadcast(new MessageRead($conversation->id, (int)$message->id, (int)$user->id, $now->toISOString()))->toOthers();
+            broadcast(new MessageRead($conversation->id, (string)$message->uuid, (string)$user->uuid, $now->toISOString()))->toOthers();
         }
 
         return response()->json([

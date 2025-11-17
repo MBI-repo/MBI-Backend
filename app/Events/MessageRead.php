@@ -12,15 +12,15 @@ class MessageRead implements ShouldBroadcastNow
     use Dispatchable, InteractsWithSockets;
 
     public int $conversationId;
-    public int $messageId;
-    public int $readerId;
+    public string $messageUuid;
+    public string $readerUuid;
     public string $readAt;
 
-    public function __construct(int $conversationId, int $messageId, int $readerId, string $readAt)
+    public function __construct(int $conversationId, string $messageUuid, string $readerUuid, string $readAt)
     {
         $this->conversationId = $conversationId;
-        $this->messageId = $messageId;
-        $this->readerId = $readerId;
+        $this->messageUuid = $messageUuid;
+        $this->readerUuid = $readerUuid;
         $this->readAt = $readAt;
     }
 
@@ -33,8 +33,8 @@ class MessageRead implements ShouldBroadcastNow
     {
         return [
             'event' => 'message.read',
-            'messageId' => $this->messageId,
-            'readerId' => $this->readerId,
+            'messageUuid' => $this->messageUuid,
+            'readerUuid' => $this->readerUuid,
             'readAt' => $this->readAt,
         ];
     }
