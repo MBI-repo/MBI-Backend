@@ -74,7 +74,7 @@ class MessagesController extends Controller
         $conversation->touch();
 
         // Broadcast new message to conversation subscribers
-        broadcast(new MessageSent($conversation->id, $this->formatMessage($message)))->toOthers();
+        broadcast(new MessageSent($conversation->id, (string)$conversation->uuid, $this->formatMessage($message)))->toOthers();
     
         return response()->json($this->formatMessage($message), 201);
     }
@@ -101,7 +101,7 @@ class MessagesController extends Controller
         $message->delete();
 
         // Broadcast deletion
-        broadcast(new MessageDeleted($conversation->id, (string)$message->uuid))->toOthers();
+        broadcast(new MessageDeleted($conversation->id, (string)$conversation->uuid, (string)$message->uuid))->toOthers();
 
         return response()->json([
             'messageId' => (string)$message->id,
@@ -134,7 +134,7 @@ class MessagesController extends Controller
                 ->update(['read_at' => $now]);
 
             // Broadcast read receipt
-            broadcast(new MessageRead($conversation->id, (string)$message->uuid, (string)$user->uuid, $now->toISOString()))->toOthers();
+            broadcast(new MessageRead($conversation->id, (string)$conversation->uuid, (string)$message->uuid, (string)$user->uuid, $now->toISOString()))->toOthers();
         }
 
         return response()->json([

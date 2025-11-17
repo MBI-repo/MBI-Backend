@@ -12,21 +12,26 @@ class MessageRead implements ShouldBroadcastNow
     use Dispatchable, InteractsWithSockets;
 
     public int $conversationId;
+    public string $conversationUuid;
     public string $messageUuid;
     public string $readerUuid;
     public string $readAt;
 
-    public function __construct(int $conversationId, string $messageUuid, string $readerUuid, string $readAt)
+    public function __construct(int $conversationId, string $conversationUuid, string $messageUuid, string $readerUuid, string $readAt)
     {
         $this->conversationId = $conversationId;
+        $this->conversationUuid = $conversationUuid;
         $this->messageUuid = $messageUuid;
         $this->readerUuid = $readerUuid;
         $this->readAt = $readAt;
     }
 
-    public function broadcastOn(): PrivateChannel
+    public function broadcastOn(): array
     {
-        return new PrivateChannel('conversation.' . $this->conversationId);
+        return [
+            new PrivateChannel('conversation.' . $this->conversationId),
+            new PrivateChannel('conversation.' . $this->conversationUuid),
+        ];
     }
 
     public function broadcastWith(): array

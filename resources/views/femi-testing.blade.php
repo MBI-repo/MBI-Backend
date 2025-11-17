@@ -9,7 +9,7 @@
   <script>
     // Replace with each user's Bearer token and a real conversation id
     const TOKEN = '{{ env('AUTH_TOKEN') }}';
-    const CONVERSATION_ID = 1; 
+    const CONVERSATION_ID = '{{ env('CONVERSATION_ID') }}'; 
 
     Pusher.logToConsole = true;
 
