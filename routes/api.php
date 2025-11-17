@@ -1,16 +1,24 @@
 <?php
 
 use App\Http\Controllers\AuthController;
-use App\Http\Controllers\HomepageController;
-use App\Http\Controllers\WaitingListController;
+use App\Http\Controllers\ConnectionsController;
+use App\Http\Controllers\ConversationsController;
 use App\Http\Controllers\DiscoverController;
+use App\Http\Controllers\EventsController;
+use App\Http\Controllers\GroupsController;
+use App\Http\Controllers\HomepageController;
+use App\Http\Controllers\MessagesController;
+use App\Http\Controllers\NetworkController;
 use App\Http\Controllers\ReceivedController;
 use App\Http\Controllers\SentController;
-use App\Http\Controllers\NetworkController;
-use App\Http\Controllers\ConnectionsController;
+use App\Http\Controllers\WaitingListController;
 use App\Models\WaitingList;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
+
+
+
+
 
 
 // Public routes
