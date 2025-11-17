@@ -93,19 +93,20 @@ Route::middleware('auth:sanctum')->prefix('v1')->group(function () {
     // Conversations
     Route::post('/conversations/direct', [ConversationsController::class, 'startDirect']);
     Route::get('/conversations', [ConversationsController::class, 'index']);
-    Route::get('/conversations/{conversationId}/messages', [ConversationsController::class, 'messages']);
-    Route::get('/conversations/{conversationId}/files', [ConversationsController::class, 'files']);
+    Route::get('/inbox', [ConversationsController::class, 'inbox']);
+    Route::post('/conversations/messages', [ConversationsController::class, 'messages']);
+    Route::post('/conversations/files', [ConversationsController::class, 'files']);
 
     // Messages
     Route::post('/messages', [MessagesController::class, 'store']);
-    Route::delete('/messages/{messageId}', [MessagesController::class, 'destroy']);
-    Route::post('/messages/{messageId}/read', [MessagesController::class, 'markRead']);
+    Route::post('/messages/delete', [MessagesController::class, 'destroy']);
+    Route::post('/messages/read', [MessagesController::class, 'markRead']);
 
     // Groups
     Route::post('/groups', [GroupsController::class, 'store']);
-    Route::post('/groups/{groupId}/participants', [GroupsController::class, 'addParticipants']);
+    Route::post('/groups/participants', [GroupsController::class, 'addParticipants']);
     Route::delete('/groups/{groupId}/participants/{userId}', [GroupsController::class, 'removeParticipant']);
-    Route::post('/groups/{groupId}/leave', [GroupsController::class, 'leave']);
+    Route::post('/groups/leave', [GroupsController::class, 'leave']);
     Route::delete('/groups/{groupId}', [GroupsController::class, 'destroy']);
     Route::get('/groups/{groupId}/profile', [GroupsController::class, 'profile']);
 

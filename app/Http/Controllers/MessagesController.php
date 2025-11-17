@@ -4,6 +4,9 @@ namespace App\Http\Controllers;
 
 use App\Models\Conversation;
 use App\Models\Message;
+use App\Events\MessageSent;
+use App\Events\MessageDeleted;
+use App\Events\MessageRead;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 
@@ -16,12 +19,23 @@ class MessagesController extends Controller
 
         $data = $request->validate([
             'content' => ['nullable', 'string'],
-            'conversationId' => ['required', 'integer', 'exists:conversations,id'],
+            'conversationId' => ['nullable', 'integer', 'exists:conversations,id'],
+            'conversationUuid' => ['nullable', 'string', 'exists:conversations,uuid'],
             'messageType' => ['required', 'in:text,image,file,voicenote'],
             'file' => ['nullable'],
         ]);
 
-        $conversation = Conversation::findOrFail($data['conversationId']);
+        if (empty($data['conversationId']) && empty($data['conversationUuid'])) {
+            return response()->json(['message' => 'conversationId or conversationUuid is required'], 422);
+        }
+
+        $conversation = Conversation::when(!empty($data['conversationId']), function ($q) use ($data) {
+                $q->where('id', $data['conversationId']);
+            })
+            ->when(!empty($data['conversationUuid']), function ($q) use ($data) {
+                $q->orWhere('uuid', $data['conversationUuid']);
+            })
+            ->firstOrFail();
 
         // Authorization: must be a participant
         if (!$conversation->participants()->where('users.id', $user->id)->exists()) {
@@ -59,15 +73,22 @@ class MessagesController extends Controller
         // Touch conversation updated_at
         $conversation->touch();
 
+        // Broadcast new message to conversation subscribers
+        broadcast(new MessageSent($conversation->id, $this->formatMessage($message)))->toOthers();
+    
         return response()->json($this->formatMessage($message), 201);
     }
 
     // DELETE /v1/messages/{messageId}
-    public function destroy($messageId, Request $request)
+    public function destroy(Request $request)
     {
         $user = $request->user();
-        $message = Message::findOrFail($messageId);
-
+      
+        $data = $request->validate([
+            'messageUuid' => ['required', 'string', 'exists:messages,uuid'],
+        ]);
+        $message = Message::where('uuid', $data['messageUuid'])->firstOrFail();
+        
         $conversation = $message->conversation;
         if (!$conversation->participants()->where('users.id', $user->id)->exists()) {
             return response()->json(['message' => 'Forbidden'], 403);
@@ -79,17 +100,24 @@ class MessagesController extends Controller
 
         $message->delete();
 
+        // Broadcast deletion
+        broadcast(new MessageDeleted($conversation->id, (int)$message->id))->toOthers();
+
         return response()->json([
             'messageId' => (string)$message->id,
+            'messageUuid' => (string)$message->uuid,
             'status' => 'deleted',
         ]);
     }
 
     // POST /v1/messages/{messageId}/read
-    public function markRead($messageId, Request $request)
+    public function markRead( Request $request)
     {
+        $data = $request->validate([
+            'messageUuid' => ['required', 'string', 'exists:messages,uuid'],
+        ]);
         $user = $request->user();
-        $message = Message::findOrFail($messageId);
+        $message = Message::where('uuid', $data['messageUuid'])->firstOrFail();
         $conversation = $message->conversation;
 
         if (!$conversation->participants()->where('users.id', $user->id)->exists()) {
@@ -104,10 +132,14 @@ class MessagesController extends Controller
                 ->whereNull('read_at')
                 ->where('sender_id', '!=', $user->id)
                 ->update(['read_at' => $now]);
+
+            // Broadcast read receipt
+            broadcast(new MessageRead($conversation->id, (int)$message->id, (int)$user->id, $now->toISOString()))->toOthers();
         }
 
         return response()->json([
             'messageId' => (string)$message->id,
+            'messageUuid' => (string)$message->uuid,
             'status' => 'read',
             'readAt' => $now,
         ]);
@@ -117,6 +149,7 @@ class MessagesController extends Controller
     {
         return [
             'id' => $m->id,
+            'uuid' => $m->uuid,
             'conversationId' => $m->conversation_id,
             'senderId' => $m->sender_id,
             'messageType' => $m->message_type,

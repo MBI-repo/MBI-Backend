@@ -3,7 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Models\Conversation;
+use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 
 class GroupsController extends Controller
 {
@@ -11,10 +13,11 @@ class GroupsController extends Controller
     public function store(Request $request)
     {
         $user = $request->user();
+       
         $data = $request->validate([
             'name' => ['required', 'string', 'max:255'],
-            'participants' => ['required', 'array'],
-            'participants.*' => ['integer', 'exists:users,id'],
+            'participants' => ['nullable', 'array'],
+            'participants.*' => ['string', 'exists:users,uuid'],
         ]);
 
         $conversation = Conversation::create([
@@ -23,25 +26,35 @@ class GroupsController extends Controller
             'creator_id' => $user->id,
         ]);
 
-        // Attach creator as admin
+        // Attach creator as admin (use numeric ID)
         $conversation->participants()->attach($user->id, ['is_admin' => true]);
 
-        // Attach other participants
-        $ids = collect($data['participants'])
-            ->filter(fn ($id) => $id !== $user->id)
+        // Attach other participants: map UUIDs to numeric user IDs before attach
+        $uuids = collect($data['participants'] ?? [])
+            ->filter(fn ($uuid) => $uuid !== $user->uuid)
             ->unique()
             ->values()
             ->all();
-        if (!empty($ids)) {
-            $conversation->participants()->attach($ids, ['is_admin' => false]);
+
+        if (!empty($uuids)) {
+            $ids = \App\Models\User::whereIn('uuid', $uuids)
+                ->pluck('id')
+                ->filter(fn ($id) => $id !== $user->id)
+                ->values()
+                ->all();
+            if (!empty($ids)) {
+                $conversation->participants()->attach($ids, ['is_admin' => false]);
+            }
         }
 
         return response()->json([
             'groupId' => $conversation->id,
+            'groupUuid' => $conversation->uuid,
             'name' => $conversation->name,
-            'participants' => $conversation->participants()->get(['users.id', 'users.full_name', 'users.email'])->map(function ($p) {
+            'participants' => $conversation->participants()->get(['users.id', 'users.uuid', 'users.full_name', 'users.email'])->map(function ($p) {
                 return [
                     'id' => $p->id,
+                    'uuid' => $p->uuid,
                     'full_name' => $p->full_name,
                     'email' => $p->email,
                 ];
@@ -49,16 +62,21 @@ class GroupsController extends Controller
         ], 201);
     }
 
-    // POST /v1/groups/{groupId}/participants
-    public function addParticipants($groupId, Request $request)
+    // POST /v1/groups/participants
+    public function addParticipants(Request $request)
     {
+       
         $user = $request->user();
         $data = $request->validate([
+            'groupUuid' => ['required', 'string'],
+            // Accept ONLY UUIDs in newParticipantIds per client request
             'newParticipantIds' => ['required', 'array'],
-            'newParticipantIds.*' => ['integer', 'exists:users,id'],
+            'newParticipantIds.*' => ['string', 'exists:users,uuid'],
         ]);
 
-        $group = Conversation::findOrFail($groupId);
+       
+        $group = Conversation::where('uuid', $data['groupUuid'])->firstOrFail();
+      
         if ($group->type !== 'group') {
             return response()->json(['message' => 'Not a group conversation'], 400);
         }
@@ -69,19 +87,26 @@ class GroupsController extends Controller
             return response()->json(['message' => 'Forbidden'], 403);
         }
 
-        $ids = collect($data['newParticipantIds'])->unique()->values()->all();
+        // Resolve UUIDs to numeric user IDs
+        $uuidList = collect($data['newParticipantIds'] ?? [])->unique()->values()->all();
+        $ids = \App\Models\User::whereIn('uuid', $uuidList)->pluck('id')->all();
+
+        // Remove current user, dedupe, and attach
+        $ids = collect($ids)->filter(fn ($id) => $id !== $user->id)->unique()->values()->all();
         foreach ($ids as $id) {
             if (!$group->participants()->where('users.id', $id)->exists()) {
                 $group->participants()->attach($id, ['is_admin' => false]);
             }
         }
 
-        $updated = $group->participants()->get(['users.id', 'users.full_name', 'users.email']);
+        $updated = $group->participants()->get(['users.id', 'users.uuid', 'users.full_name', 'users.email']);
         return response()->json([
             'groupId' => $group->id,
+            'groupUuid' => $group->uuid,
             'updatedParticipants' => $updated->map(function ($p) {
                 return [
                     'id' => $p->id,
+                    'uuid' => $p->uuid,
                     'full_name' => $p->full_name,
                     'email' => $p->email,
                 ];
@@ -93,7 +118,7 @@ class GroupsController extends Controller
     public function removeParticipant($groupId, $userId, Request $request)
     {
         $authUser = $request->user();
-        $group = Conversation::findOrFail($groupId);
+        $group = Conversation::where('id', $groupId)->orWhere('uuid', $groupId)->firstOrFail();
         if ($group->type !== 'group') {
             return response()->json(['message' => 'Not a group conversation'], 400);
         }
@@ -103,19 +128,28 @@ class GroupsController extends Controller
             return response()->json(['message' => 'Forbidden'], 403);
         }
 
-        $group->participants()->detach($userId);
+        // Support removing by numeric id or uuid
+        $targetUser = \App\Models\User::where('id', $userId)->orWhere('uuid', $userId)->first();
+        if ($targetUser) {
+            $group->participants()->detach($targetUser->id);
+        }
 
         return response()->json([
             'groupId' => $group->id,
-            'removedUserId' => (string)$userId,
+            'groupUuid' => $group->uuid,
+            'removedUserId' => $targetUser ? (string)$targetUser->id : (string)$userId,
+            'removedUserUuid' => $targetUser ? (string)$targetUser->uuid : null,
         ]);
     }
 
     // POST /v1/groups/{groupId}/leave
-    public function leave($groupId, Request $request)
+    public function leave(Request $request)
     {
         $user = $request->user();
-        $group = Conversation::findOrFail($groupId);
+        $data = $request->validate([
+            'groupUuid' => ['required', 'string'],
+        ]);
+        $group = Conversation::where('uuid', $data['groupUuid'])->firstOrFail();
         if ($group->type !== 'group') {
             return response()->json(['message' => 'Not a group conversation'], 400);
         }
@@ -124,6 +158,7 @@ class GroupsController extends Controller
 
         return response()->json([
             'groupId' => $group->id,
+            'groupUuid' => $group->uuid,
             'status' => 'left',
         ]);
     }
@@ -132,7 +167,7 @@ class GroupsController extends Controller
     public function destroy($groupId, Request $request)
     {
         $user = $request->user();
-        $group = Conversation::findOrFail($groupId);
+        $group = Conversation::where('id', $groupId)->orWhere('uuid', $groupId)->firstOrFail();
         if ($group->type !== 'group') {
             return response()->json(['message' => 'Not a group conversation'], 400);
         }
@@ -148,7 +183,8 @@ class GroupsController extends Controller
         $group->delete();
 
         return response()->json([
-            'groupId' => (string)$groupId,
+            'groupId' => (string)$group->id,
+            'groupUuid' => (string)$group->uuid,
             'status' => 'deleted',
         ]);
     }
@@ -157,7 +193,10 @@ class GroupsController extends Controller
     public function profile($groupId, Request $request)
     {
         $user = $request->user();
-        $group = Conversation::with(['participants:id,full_name,email'])->findOrFail($groupId);
+        $group = Conversation::with(['participants:id,uuid,full_name,email'])
+            ->where('id', $groupId)
+            ->orWhere('uuid', $groupId)
+            ->firstOrFail();
         if ($group->type !== 'group') {
             return response()->json(['message' => 'Not a group conversation'], 400);
         }
@@ -167,7 +206,7 @@ class GroupsController extends Controller
         // }
 
         $participants = $group->participants;
-        $admins = $group->participants()->wherePivot('is_admin', true)->get(['users.id', 'users.full_name', 'users.email']);
+        $admins = $group->participants()->wherePivot('is_admin', true)->get(['users.id', 'users.uuid', 'users.full_name', 'users.email']);
 
         return response()->json([
             'name' => $group->name,
@@ -175,6 +214,7 @@ class GroupsController extends Controller
             'participants' => $participants->map(function ($p) {
                 return [
                     'id' => $p->id,
+                    'uuid' => $p->uuid,
                     'full_name' => $p->full_name,
                     'email' => $p->email,
                 ];
@@ -182,6 +222,7 @@ class GroupsController extends Controller
             'admins' => $admins->map(function ($p) {
                 return [
                     'id' => $p->id,
+                    'uuid' => $p->uuid,
                     'full_name' => $p->full_name,
                     'email' => $p->email,
                 ];

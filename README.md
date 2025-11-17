@@ -29,6 +29,74 @@ You may also try the [Laravel Bootcamp](https://bootcamp.laravel.com), where you
 
 If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
 
+## Real-time Messaging (WebSockets)
+
+This backend broadcasts conversation events so a React client can receive real-time updates:
+
+- Message creation (`message.sent`)
+- Message deletion (`message.deleted`)
+- Message read receipts (`message.read`)
+
+Broadcast channels are private: `conversation.{conversationId}`. Only conversation participants can subscribe.
+
+### Configure broadcaster
+
+1. Set broadcasting to `pusher` in `.env` (updated in `.env.example`):
+
+   `BROADCAST_CONNECTION=pusher`
+
+2. Provide Pusher-compatible credentials (Pusher or Laravel WebSockets):
+
+   - `PUSHER_APP_ID="your-app-id"`
+   - `PUSHER_APP_KEY="your-app-key"`
+   - `PUSHER_APP_SECRET="your-app-secret"`
+   - `PUSHER_HOST=127.0.0.1`
+   - `PUSHER_PORT=6001`
+   - `PUSHER_SCHEME=http`
+   - `PUSHER_APP_CLUSTER=mt1`
+   - `PUSHER_USETLS=false`
+
+### Channel auth
+
+WebSocket subscriptions use `auth:sanctum`. Ensure your React client includes the Sanctum session cookie or a bearer token when connecting.
+
+### React client example (Laravel Echo)
+
+```ts
+import Echo from 'laravel-echo';
+import Pusher from 'pusher-js';
+
+window.Pusher = Pusher;
+
+const echo = new Echo({
+  broadcaster: 'pusher',
+  key: import.meta.env.VITE_PUSHER_APP_KEY,
+  wsHost: import.meta.env.VITE_PUSHER_HOST || '127.0.0.1',
+  wsPort: Number(import.meta.env.VITE_PUSHER_PORT || 6001),
+  forceTLS: false,
+  enabledTransports: ['ws'],
+  authEndpoint: '/broadcasting/auth',
+  auth: {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  },
+});
+
+echo.private(`conversation.${conversationId}`)
+  .listen('.message.sent', (payload) => {
+    // payload.message
+  })
+  .listen('.message.deleted', (payload) => {
+    // payload.messageId
+  })
+  .listen('.message.read', (payload) => {
+    // payload.messageId, payload.readerId, payload.readAt
+  });
+```
+
+For a local WebSocket server, install `beyondcode/laravel-websockets` and run `php artisan websockets:serve`. You may need to adjust `minimum-stability` and set `prefer-stable: true` in `composer.json` to allow compatible versions.
+
 ## Laravel Sponsors
 
 We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).

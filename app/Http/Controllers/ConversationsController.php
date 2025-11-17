@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Conversation;
 use App\Models\Message;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
@@ -15,10 +16,16 @@ class ConversationsController extends Controller
     {
         $user = $request->user();
         $data = $request->validate([
-            'participantId' => ['required', 'integer', 'exists:users,id'],
+            'participantUuid' => ['nullable', 'string', 'exists:users,uuid'],
         ]);
 
-        if ((int)$data['participantId'] === (int)$user->id) {
+
+        $participant = null;
+
+        $participant = User::where('uuid', $data['participantUuid'])->firstOrFail();
+
+
+        if ((int)$participant->id === (int)$user->id) {
             return response()->json(['message' => 'Cannot start a direct conversation with yourself'], 422);
         }
 
@@ -28,8 +35,8 @@ class ConversationsController extends Controller
             ->whereHas('participants', function ($q) use ($user) {
                 $q->where('users.id', $user->id);
             })
-            ->whereHas('participants', function ($q) use ($data) {
-                $q->where('users.id', $data['participantId']);
+            ->whereHas('participants', function ($q) use ($participant) {
+                $q->where('users.id', $participant->id);
             })
             ->first();
 
@@ -40,12 +47,13 @@ class ConversationsController extends Controller
                 'creator_id' => $user->id,
             ]);
             $conv->participants()->attach($user->id, ['is_admin' => false]);
-            $conv->participants()->attach($data['participantId'], ['is_admin' => false]);
+            $conv->participants()->attach($participant->id, ['is_admin' => false]);
             $existing = $conv;
         }
 
         return response()->json([
             'conversationId' => $existing->id,
+            'conversationUuid' => $existing->uuid,
         ], 201);
     }
     // GET /v1/conversations
@@ -71,11 +79,13 @@ class ConversationsController extends Controller
             $last = $conv->messages->first();
             return [
                 'id' => $conv->id,
+                'uuid' => $conv->uuid,
                 'type' => $conv->type,
                 'name' => $conv->name,
                 'updatedAt' => $conv->updated_at,
                 'lastMessage' => $last ? [
                     'id' => $last->id,
+                    'uuid' => $last->uuid,
                     'type' => $last->message_type,
                     'content' => $last->content,
                     'fileUrl' => $last->file_url,
@@ -84,6 +94,7 @@ class ConversationsController extends Controller
                 'participants' => $conv->participants->map(function ($p) {
                     return [
                         'id' => $p->id,
+                        'uuid' => $p->uuid,
                         'full_name' => $p->full_name,
                         'email' => $p->email,
                     ];
@@ -97,14 +108,17 @@ class ConversationsController extends Controller
     }
 
     // GET /v1/conversations/{conversationId}/messages
-    public function messages($conversationId, Request $request)
+    public function messages(Request $request)
     {
         $user = $request->user();
+        $conversationId = $request->conversationUuid;
+
         $limit = (int)($request->query('limit', 50));
         $beforeId = $request->query('before');
 
-        $conversation = Conversation::with(['participants:id,full_name,email'])
-            ->findOrFail($conversationId);
+        $conversation = Conversation::with(['participants:id,full_name,email,uuid'])
+            ->where('uuid', $conversationId)
+            ->firstOrFail();
 
         // Authorization: must be a participant
         if (!$conversation->participants()->where('users.id', $user->id)->exists()) {
@@ -121,6 +135,7 @@ class ConversationsController extends Controller
         $messages = $messagesQuery->limit($limit)->get()->reverse()->values()->map(function (Message $m) {
             return [
                 'id' => $m->id,
+                'uuid' => $m->uuid,
                 'conversationId' => $m->conversation_id,
                 'senderId' => $m->sender_id,
                 'messageType' => $m->message_type,
@@ -137,12 +152,14 @@ class ConversationsController extends Controller
 
         $convData = [
             'id' => $conversation->id,
+            'uuid' => $conversation->uuid,
             'type' => $conversation->type,
             'name' => $conversation->name,
             'updatedAt' => $conversation->updated_at,
             'participants' => $conversation->participants->map(function ($p) {
                 return [
                     'id' => $p->id,
+                    'uuid' => $p->uuid,
                     'full_name' => $p->full_name,
                     'email' => $p->email,
                 ];
@@ -156,16 +173,17 @@ class ConversationsController extends Controller
     }
 
     // GET /v1/conversations/{conversationId}/files
-    public function files($conversationId, Request $request)
+    public function files(Request $request)
     {
         $user = $request->user();
-        $conversation = Conversation::findOrFail($conversationId);
+        $conversationId = $request->conversationUuid;
+        $conversation = Conversation::where('uuid', $conversationId)->firstOrFail();
 
         if (!$conversation->participants()->where('users.id', $user->id)->exists()) {
             return response()->json(['message' => 'Forbidden'], 403);
         }
 
-        $fileTypes = ['image', 'file', 'voicenote','video'];
+        $fileTypes = ['image', 'file', 'voicenote', 'video'];
         $files = Message::where('conversation_id', $conversation->id)
             ->whereIn('message_type', $fileTypes)
             ->whereNotNull('file_url')
@@ -184,5 +202,57 @@ class ConversationsController extends Controller
         return response()->json([
             'files' => $files,
         ]);
+    }
+
+    // GET /v1/inbox
+    public function inbox(Request $request)
+    {
+        $user = $request->user();
+        $conversations = Conversation::query()
+            ->whereHas('participants', function ($q) use ($user) {
+                $q->where('users.id', $user->id);
+            })
+            ->with(['participants:id,uuid,full_name,email', 'messages' => function ($q) {
+                $q->latest('created_at')->limit(1);
+            }])
+            ->orderByDesc('updated_at')
+            ->get()
+            ->map(function (Conversation $conv) use ($user) {
+                $last = $conv->messages->first();
+                $summary = [
+                    'conversationId' => $conv->id,
+                    'conversationUuid' => $conv->uuid,
+                    'type' => $conv->type,
+                    'name' => $conv->name,
+                    'updatedAt' => $conv->updated_at,
+                    'lastMessage' => $last ? [
+                        'id' => $last->id,
+                        'uuid' => $last->uuid,
+                        'type' => $last->message_type,
+                        'content' => $last->content,
+                        'fileUrl' => $last->file_url,
+                        'createdAt' => $last->created_at,
+                        'senderId' => $last->sender_id,
+                    ] : null,
+                ];
+
+                if ($conv->type === 'direct') {
+                    $other = $conv->participants->firstWhere('id', '!=', $user->id);
+                    if ($other) {
+                        $summary['otherParticipant'] = [
+                            'id' => $other->id,
+                            'uuid' => $other->uuid,
+                            'full_name' => $other->full_name,
+                            'email' => $other->email,
+                        ];
+                    }
+                } else {
+                    $summary['memberCount'] = $conv->participants->count();
+                }
+
+                return $summary;
+            });
+
+        return response()->json(['items' => $conversations]);
     }
 }
