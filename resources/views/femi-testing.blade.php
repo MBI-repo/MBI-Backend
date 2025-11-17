@@ -8,12 +8,12 @@
   <h1>Conversation Test</h1>
   <script>
     // Replace with each user's Bearer token and a real conversation id
-    const TOKEN = 'f1nStr1pB8s5dWfSXj5trFfQE0OBqHcYtpyTc5Cg3cdc8937';
+    const TOKEN = '{{ env('AUTH_TOKEN') }}';
     const CONVERSATION_ID = 1; 
 
     Pusher.logToConsole = true;
 
-    const pusher = new Pusher('3127abdf5ca7dbbb3c66', {
+    const pusher = new Pusher('{{ env('PUSHER_APP_KEY') }}', {
       cluster: 'eu',
       // Private channel auth with Sanctum
       authEndpoint: '/broadcasting/auth',
