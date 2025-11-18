@@ -261,6 +261,7 @@ class ConversationsController extends Controller
     {
         try {
             $user = $request->user();
+            return $user;
             $conversations = Conversation::query()
                 ->whereHas('participants', function ($q) use ($user) {
                     $q->where('users.id', $user->id);
