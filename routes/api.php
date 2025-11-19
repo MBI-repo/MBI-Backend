@@ -27,6 +27,7 @@ Route::post('/login', [AuthController::class, 'login']);
 
 Route::group(['prefix' => 'user'], function () {
     Route::get('/', [AuthController::class, 'user'])->name('fetchUser');
+    Route::post('/', [AuthController::class, 'update'])->middleware('auth:sanctum')->name('updateUser');
 });
 
 
