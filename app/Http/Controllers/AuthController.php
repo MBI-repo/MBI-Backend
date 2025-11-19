@@ -57,14 +57,15 @@ class AuthController extends Controller
             $file = $request->file('image');
             $filename = (string) Str::uuid() . '.' . $file->getClientOriginalExtension();
             $symlinkExists = file_exists(public_path('storage')) || is_link(public_path('storage'));
+            $customPublicDir = public_path('mybridge-internation-files/profile_images');
 
             if ($symlinkExists) {
                 $path = $file->storeAs('profile_images', $filename, 'public');
                 $fullUrl = url(Storage::url($path));
             } else {
-                File::ensureDirectoryExists(public_path('storage/profile_images'));
-                $file->move(public_path('storage/profile_images'), $filename);
-                $fullUrl = url('/storage/profile_images/' . $filename);
+                File::ensureDirectoryExists($customPublicDir);
+                $file->move($customPublicDir, $filename);
+                $fullUrl = url('/mybridge-internation-files/profile_images/' . $filename);
             }
 
             $user->image = $fullUrl;
@@ -218,8 +219,12 @@ class AuthController extends Controller
                     $existingPath = null;
                     if (Str::startsWith($user->image, ['http://', 'https://'])) {
                         $urlPath = parse_url($user->image, PHP_URL_PATH);
-                        if ($urlPath && Str::startsWith($urlPath, '/storage/')) {
-                            $existingPath = ltrim(Str::replaceFirst('/storage/', '', $urlPath), '/');
+                        if ($urlPath) {
+                            if (Str::startsWith($urlPath, '/storage/')) {
+                                $existingPath = ltrim(Str::replaceFirst('/storage/', '', $urlPath), '/');
+                            } elseif (Str::startsWith($urlPath, '/mybridge-internation-files/')) {
+                                $existingPath = ltrim(Str::replaceFirst('/mybridge-internation-files/', '', $urlPath), '/');
+                            }
                         }
                     } else {
                         $existingPath = ltrim($user->image, '/');
@@ -230,9 +235,12 @@ class AuthController extends Controller
                                 Storage::disk('public')->delete($existingPath);
                             }
                         } else {
-                            $publicFile = public_path('storage/' . $existingPath);
-                            if (file_exists($publicFile)) {
-                                @unlink($publicFile);
+                            $publicStorageFile = public_path('storage/' . $existingPath);
+                            $publicCustomFile = public_path('mybridge-internation-files/' . $existingPath);
+                            if (file_exists($publicStorageFile)) {
+                                @unlink($publicStorageFile);
+                            } elseif (file_exists($publicCustomFile)) {
+                                @unlink($publicCustomFile);
                             }
                         }
                     }
@@ -244,9 +252,10 @@ class AuthController extends Controller
                     $path = $file->storeAs('profile_images', $filename, 'public');
                     $user->image = url(Storage::url($path));
                 } else {
-                    File::ensureDirectoryExists(public_path('storage/profile_images'));
-                    $file->move(public_path('storage/profile_images'), $filename);
-                    $user->image = url('/storage/profile_images/' . $filename);
+                    $customPublicDir = public_path('mybridge-internation-files/profile_images');
+                    File::ensureDirectoryExists($customPublicDir);
+                    $file->move($customPublicDir, $filename);
+                    $user->image = url('/mybridge-internation-files/profile_images/' . $filename);
                 }
             }
 
