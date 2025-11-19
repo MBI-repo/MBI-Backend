@@ -168,7 +168,7 @@ class ConversationsController extends Controller
                     'messageType' => $m->message_type,
                     'content' => $m->content,
                     'fileData' => $m->file_url ? [
-                        'url' => $m->file_url,
+                        'url' => 'https://api.mybridgeinternational.org/mybridge-backend-files/public/'.$m->file_url,
                         'mimeType' => $m->file_mime_type,
                     ] : null,
                     'readAt' => $m->read_at,
@@ -238,7 +238,7 @@ class ConversationsController extends Controller
                     $name = $path ? basename($path) : null;
                     return [
                         'name' => $name,
-                        'url' => $m->file_url,
+                        'url' => 'https://api.mybridgeinternational.org/mybridge-backend-files/public/'.$m->file_url,
                         'mimeType' => $m->file_mime_type,
                         'sender' => $m->sender_id,
                     ];
