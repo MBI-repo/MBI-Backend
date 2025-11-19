@@ -8,6 +8,7 @@ use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\File;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
@@ -51,11 +52,21 @@ class AuthController extends Controller
             'status' => 'active',
         ]);
 
-        // Optional image upload: store and return URL
+        // Optional image upload: store and return URL (supports environments without storage symlink)
         if ($request->hasFile('image')) {
-            $path = $request->file('image')->store('profile_images', 'public');
-            // Persist FULL URL in DB as requested
-            $fullUrl = url(Storage::url($path));
+            $file = $request->file('image');
+            $filename = (string) Str::uuid() . '.' . $file->getClientOriginalExtension();
+            $symlinkExists = file_exists(public_path('storage')) || is_link(public_path('storage'));
+
+            if ($symlinkExists) {
+                $path = $file->storeAs('profile_images', $filename, 'public');
+                $fullUrl = url(Storage::url($path));
+            } else {
+                File::ensureDirectoryExists(public_path('storage/profile_images'));
+                $file->move(public_path('storage/profile_images'), $filename);
+                $fullUrl = url('/storage/profile_images/' . $filename);
+            }
+
             $user->image = $fullUrl;
             $user->save();
         }
@@ -199,27 +210,44 @@ class AuthController extends Controller
 
             // Optional image upload: delete existing file then store and persist FULL URL
             if ($request->hasFile('image')) {
+                $file = $request->file('image');
+                $symlinkExists = file_exists(public_path('storage')) || is_link(public_path('storage'));
+
                 // Attempt to delete old file if it exists
                 if (!empty($user->image)) {
                     $existingPath = null;
                     if (Str::startsWith($user->image, ['http://', 'https://'])) {
                         $urlPath = parse_url($user->image, PHP_URL_PATH);
                         if ($urlPath && Str::startsWith($urlPath, '/storage/')) {
-                            // Convert "/storage/..." to public disk relative path
                             $existingPath = ltrim(Str::replaceFirst('/storage/', '', $urlPath), '/');
                         }
                     } else {
-                        // Raw stored path
                         $existingPath = ltrim($user->image, '/');
                     }
-                    if ($existingPath && Storage::disk('public')->exists($existingPath)) {
-                        Storage::disk('public')->delete($existingPath);
+                    if ($existingPath) {
+                        if ($symlinkExists) {
+                            if (Storage::disk('public')->exists($existingPath)) {
+                                Storage::disk('public')->delete($existingPath);
+                            }
+                        } else {
+                            $publicFile = public_path('storage/' . $existingPath);
+                            if (file_exists($publicFile)) {
+                                @unlink($publicFile);
+                            }
+                        }
                     }
                 }
 
                 // Store new image and persist full URL
-                $path = $request->file('image')->store('profile_images', 'public');
-                $user->image = url(Storage::url($path));
+                $filename = (string) Str::uuid() . '.' . $file->getClientOriginalExtension();
+                if ($symlinkExists) {
+                    $path = $file->storeAs('profile_images', $filename, 'public');
+                    $user->image = url(Storage::url($path));
+                } else {
+                    File::ensureDirectoryExists(public_path('storage/profile_images'));
+                    $file->move(public_path('storage/profile_images'), $filename);
+                    $user->image = url('/storage/profile_images/' . $filename);
+                }
             }
 
             $user->save();
