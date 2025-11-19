@@ -52,27 +52,31 @@ class AuthController extends Controller
             'status' => 'active',
         ]);
 
-        // Optional image upload: store and return URL (supports environments without storage symlink)
+        // Optional image upload: store PATH only; return absolute URL in response
         if ($request->hasFile('image')) {
             $file = $request->file('image');
             $filename = (string) Str::uuid() . '.' . $file->getClientOriginalExtension();
-            $symlinkExists = file_exists(public_path('storage')) || is_link(public_path('storage'));
-            $customPublicDir = public_path('mybridge-internation-files/profile_images');
 
-            if ($symlinkExists) {
-                $path = $file->storeAs('profile_images', $filename, 'public');
-                $fullUrl = url(Storage::url($path));
-            } else {
-                File::ensureDirectoryExists($customPublicDir);
-                $file->move($customPublicDir, $filename);
-                $fullUrl = url('/mybridge-internation-files/profile_images/' . $filename);
-            }
+            // Prefer Hostinger path under mybridge-backend-files/public if present
+            $basePublicRoot = public_path('mybridge-backend-files/public');
+            $targetDir = is_dir($basePublicRoot)
+                ? $basePublicRoot . '/storage/profile_images'
+                : public_path('storage/profile_images');
 
-            $user->image = $fullUrl;
+            File::ensureDirectoryExists($targetDir);
+            $file->move($targetDir, $filename);
+
+            // Persist PATH only
+            $user->image = '/storage/profile_images/' . $filename;
             $user->save();
         }
 
         $token = $user->createToken('auth_token')->plainTextToken;
+
+        // Ensure image field is an absolute URL in response
+        if (!empty($user->image)) {
+            $user->setAttribute('image', $this->toAbsoluteUrl($user->image));
+        }
 
         return response()->json([
             'success' => true,
@@ -119,9 +123,9 @@ class AuthController extends Controller
             ], 403);
         }
 
-        // Ensure image field is a full URL in response
-        if ($user->image && !Str::startsWith($user->image, ['http://', 'https://'])) {
-            $user->setAttribute('image', url(Storage::url($user->image)));
+        // Ensure image field is an absolute URL in response
+        if (!empty($user->image)) {
+            $user->setAttribute('image', $this->toAbsoluteUrl($user->image));
         }
 
         $token = $user->createToken('auth_token')->plainTextToken;
@@ -156,8 +160,8 @@ class AuthController extends Controller
     public function user(Request $request)
     {
         $user = $request->user();
-        if ($user && $user->image && !Str::startsWith($user->image, ['http://', 'https://'])) {
-            $user->setAttribute('image', url(Storage::url($user->image)));
+        if ($user && !empty($user->image)) {
+            $user->setAttribute('image', $this->toAbsoluteUrl($user->image));
         }
 
         return response()->json([
@@ -209,61 +213,44 @@ class AuthController extends Controller
                 $user->license_number = $data['license_number'];
             }
 
-            // Optional image upload: delete existing file then store and persist FULL URL
+            // Optional image upload: delete existing file then store and persist PATH only
             if ($request->hasFile('image')) {
                 $file = $request->file('image');
-                $symlinkExists = file_exists(public_path('storage')) || is_link(public_path('storage'));
+                $basePublicRoot = public_path('mybridge-backend-files/public');
 
                 // Attempt to delete old file if it exists
                 if (!empty($user->image)) {
-                    $existingPath = null;
-                    if (Str::startsWith($user->image, ['http://', 'https://'])) {
-                        $urlPath = parse_url($user->image, PHP_URL_PATH);
-                        if ($urlPath) {
-                            if (Str::startsWith($urlPath, '/storage/')) {
-                                $existingPath = ltrim(Str::replaceFirst('/storage/', '', $urlPath), '/');
-                            } elseif (Str::startsWith($urlPath, '/mybridge-internation-files/')) {
-                                $existingPath = ltrim(Str::replaceFirst('/mybridge-internation-files/', '', $urlPath), '/');
-                            }
-                        }
-                    } else {
-                        $existingPath = ltrim($user->image, '/');
-                    }
-                    if ($existingPath) {
-                        if ($symlinkExists) {
-                            if (Storage::disk('public')->exists($existingPath)) {
-                                Storage::disk('public')->delete($existingPath);
-                            }
-                        } else {
-                            $publicStorageFile = public_path('storage/' . $existingPath);
-                            $publicCustomFile = public_path('mybridge-internation-files/' . $existingPath);
-                            if (file_exists($publicStorageFile)) {
-                                @unlink($publicStorageFile);
-                            } elseif (file_exists($publicCustomFile)) {
-                                @unlink($publicCustomFile);
-                            }
+                    $urlPath = parse_url($user->image, PHP_URL_PATH) ?: $user->image;
+                    if ($urlPath && Str::startsWith($urlPath, '/')) {
+                        $existingPath = ltrim($urlPath, '/');
+                        // Try delete from both possible locations
+                        $publicStorageFile = public_path($existingPath);
+                        $publicBackendFile = is_dir($basePublicRoot)
+                            ? $basePublicRoot . '/' . $existingPath
+                            : null;
+                        if (file_exists($publicStorageFile)) {
+                            @unlink($publicStorageFile);
+                        } elseif ($publicBackendFile && file_exists($publicBackendFile)) {
+                            @unlink($publicBackendFile);
                         }
                     }
                 }
 
-                // Store new image and persist full URL
+                // Store new image and persist PATH only
                 $filename = (string) Str::uuid() . '.' . $file->getClientOriginalExtension();
-                if ($symlinkExists) {
-                    $path = $file->storeAs('profile_images', $filename, 'public');
-                    $user->image = url(Storage::url($path));
-                } else {
-                    $customPublicDir = public_path('mybridge-internation-files/profile_images');
-                    File::ensureDirectoryExists($customPublicDir);
-                    $file->move($customPublicDir, $filename);
-                    $user->image = url('/mybridge-internation-files/profile_images/' . $filename);
-                }
+                $targetDir = is_dir($basePublicRoot)
+                    ? $basePublicRoot . '/storage/profile_images'
+                    : public_path('storage/profile_images');
+                File::ensureDirectoryExists($targetDir);
+                $file->move($targetDir, $filename);
+                $user->image = '/storage/profile_images/' . $filename;
             }
 
             $user->save();
 
-            // Ensure full URL in response
-            if ($user->image && !Str::startsWith($user->image, ['http://', 'https://'])) {
-                $user->setAttribute('image', url(Storage::url($user->image)));
+            // Ensure absolute URL in response
+            if (!empty($user->image)) {
+                $user->setAttribute('image', $this->toAbsoluteUrl($user->image));
             }
 
             return response()->json([
@@ -278,5 +265,19 @@ class AuthController extends Controller
                 'error' => $e->getMessage(),
             ], 500);
         }
+    }
+
+    /**
+     * Build absolute URL for stored path.
+     */
+    private function toAbsoluteUrl(?string $path): ?string
+    {
+        if (empty($path)) {
+            return null;
+        }
+        if (Str::startsWith($path, ['http://', 'https://'])) {
+            return $path;
+        }
+        return rtrim('https://api.mybridgeinternational.org/mybridge-backend-files/public', '/') . $path;
     }
 }

@@ -10,6 +10,7 @@ use App\Events\MessageRead;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Str;
 
 class MessagesController extends Controller
 {
@@ -59,7 +60,10 @@ class MessagesController extends Controller
             $storedFileMime = null;
             if ($request->hasFile('file')) {
                 $file = $request->file('file');
-                $uploadDir = public_path('uploads/messages');
+                $basePublicRoot = public_path('mybridge-backend-files/public');
+                $uploadDir = is_dir($basePublicRoot)
+                    ? $basePublicRoot . '/uploads/messages'
+                    : public_path('uploads/messages');
                 if (!is_dir($uploadDir)) {
                     @mkdir($uploadDir, 0755, true);
                 }
@@ -201,11 +205,22 @@ class MessagesController extends Controller
             'messageType' => $m->message_type,
             'content' => $m->content,
             'fileData' => $m->file_url ? [
-                'url' => $m->file_url,
+                'url' => $this->toAbsoluteUrl($m->file_url),
                 'mimeType' => $m->file_mime_type,
             ] : null,
             'readAt' => $m->read_at,
             'createdAt' => $m->created_at,
         ];
+    }
+
+    private function toAbsoluteUrl(?string $path): ?string
+    {
+        if (empty($path)) {
+            return null;
+        }
+        if (Str::startsWith($path, ['http://', 'https://'])) {
+            return $path;
+        }
+        return rtrim('https://api.mybridgeinternational.org/mybridge-backend-files/public', '/') . $path;
     }
 }
