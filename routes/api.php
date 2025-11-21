@@ -96,7 +96,7 @@ Route::middleware('auth:sanctum')->prefix('v1')->group(function () {
     Route::get('/conversations', [ConversationsController::class, 'index']);
     Route::get('/inbox', [ConversationsController::class, 'inbox']);
     Route::post('/conversations/messages', [ConversationsController::class, 'messages']);
-    Route::post('/conversations/allmessages', [ConversationsController::class, 'messages']);
+    Route::any('/conversations/allmessages', [ConversationsController::class, 'messages']);
     Route::post('/conversations/files', [ConversationsController::class, 'files']);
 
     // Messages
