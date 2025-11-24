@@ -17,6 +17,7 @@ class GroupsController extends Controller
             $user = $request->user();
             $validator = Validator::make($request->all(), [
                 'name' => ['required', 'string', 'max:255'],
+                'description' => ['nullable', 'string', 'max:255'],
                 'participants' => ['nullable', 'array'],
                 'participants.*' => ['string', 'exists:users,uuid'],
             ]);
@@ -32,6 +33,7 @@ class GroupsController extends Controller
             $conversation = Conversation::create([
                 'type' => 'group',
                 'name' => $data['name'],
+                'description' => $data['description'] ?? null,
                 'creator_id' => $user->id,
             ]);
 

@@ -11,6 +11,7 @@ return new class extends Migration {
             $table->id();
             $table->enum('type', ['direct', 'group']);
             $table->string('name')->nullable();
+            $table->text('description')->nullable();
             $table->foreignId('creator_id')->nullable()->constrained('users')->nullOnDelete();
             $table->timestamps();
 

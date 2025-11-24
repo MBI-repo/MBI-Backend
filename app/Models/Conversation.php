@@ -13,6 +13,7 @@ class Conversation extends Model
     protected $fillable = [
         'type',
         'name',
+        'description',
         'creator_id',
     ];
 
