@@ -17,3 +17,9 @@ Broadcast::channel('conversation.{conversationKey}', function ($user, $conversat
         })
         ->exists();
 });
+
+// Authorize subscription to private inbox channels by numeric ID or UUID
+Broadcast::channel('inbox.{userKey}', function ($user, $userKey) {
+    return (is_numeric($userKey) && (int)$user->id === (int)$userKey)
+        || (!is_numeric($userKey) && (string)$user->uuid === (string)$userKey);
+});

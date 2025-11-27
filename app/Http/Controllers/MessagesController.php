@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Conversation;
 use App\Models\Message;
+use App\Events\InboxUpdated;
 use App\Events\MessageSent;
 use App\Events\MessageDeleted;
 use App\Events\MessageRead;
@@ -91,8 +92,17 @@ class MessagesController extends Controller
             ]);
 
             $conversation->touch();
+            $conversation->load(['participants:id,uuid,full_name,email']);
 
+            // Broadcast to conversation channels (existing real-time messaging)
             broadcast(new MessageSent($conversation->id, (string)$conversation->uuid, $this->formatMessage($message)))->toOthers();
+
+            // Broadcast inbox updates to all participants so their inbox reflects the new last message
+            foreach ($conversation->participants as $participant) {
+                $item = $this->formatInboxItem($conversation, $participant, $message);
+                broadcast(new InboxUpdated($participant->id, (string)$participant->uuid, $item))->toOthers();
+            }
+
             return response()->json($this->formatMessage($message), 201);
         } catch (\Throwable $e) {
             return response()->json([
@@ -211,6 +221,42 @@ class MessagesController extends Controller
             'readAt' => $m->read_at,
             'createdAt' => $m->created_at,
         ];
+    }
+
+    private function formatInboxItem(Conversation $conv, $receiver, ?Message $last): array
+    {
+        $item = [
+            'conversationId' => $conv->id,
+            'conversationUuid' => $conv->uuid,
+            'type' => $conv->type,
+            'name' => $conv->name,
+            'updatedAt' => $conv->updated_at,
+            'lastMessage' => $last ? [
+                'id' => $last->id,
+                'uuid' => $last->uuid,
+                'type' => $last->message_type,
+                'content' => $last->content,
+                'fileUrl' => $this->toAbsoluteUrl($last->file_url),
+                'createdAt' => $last->created_at,
+                'senderId' => $last->sender_id,
+            ] : null,
+        ];
+
+        if ($conv->type === 'direct') {
+            $other = $conv->participants->firstWhere('id', '!=', $receiver->id);
+            if ($other) {
+                $item['otherParticipant'] = [
+                    'id' => $other->id,
+                    'uuid' => $other->uuid,
+                    'full_name' => $other->full_name,
+                    'email' => $other->email,
+                ];
+            }
+        } else {
+            $item['memberCount'] = $conv->participants->count();
+        }
+
+        return $item;
     }
 
     private function toAbsoluteUrl(?string $path): ?string

@@ -9,6 +9,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
+use App\Events\InboxUpdated;
 
 class ConversationsController extends Controller
 {
@@ -52,7 +53,28 @@ class ConversationsController extends Controller
                 ]);
                 $conv->participants()->attach($user->id, ['is_admin' => false]);
                 $conv->participants()->attach($participant->id, ['is_admin' => false]);
+                $conv->load(['participants:id,uuid,full_name,email']);
                 $existing = $conv;
+
+                // Broadcast inbox item to both participants so the new conversation appears in inbox
+                foreach ($conv->participants as $p) {
+                    $other = $conv->participants->firstWhere('id', '!=', $p->id);
+                    $item = [
+                        'conversationId' => $conv->id,
+                        'conversationUuid' => $conv->uuid,
+                        'type' => $conv->type,
+                        'name' => $conv->name,
+                        'updatedAt' => $conv->updated_at,
+                        'lastMessage' => null,
+                        'otherParticipant' => $other ? [
+                            'id' => $other->id,
+                            'uuid' => $other->uuid,
+                            'full_name' => $other->full_name,
+                            'email' => $other->email,
+                        ] : null,
+                    ];
+                    broadcast(new InboxUpdated($p->id, (string)$p->uuid, $item))->toOthers();
+                }
             }
 
             return response()->json([
@@ -100,7 +122,7 @@ class ConversationsController extends Controller
                         'uuid' => $last->uuid,
                         'type' => $last->message_type,
                         'content' => $last->content,
-                        'fileUrl' => $last->file_url,
+                        'fileUrl' => $last->file_url ? 'https://api.mybridgeinternational.org/mybridge-backend-files/public' . $last->file_url : null,
                         'createdAt' => $last->created_at,
                     ] : null,
                     'participants' => $conv->participants->map(function ($p) {
@@ -284,7 +306,7 @@ class ConversationsController extends Controller
                             'uuid' => $last->uuid,
                             'type' => $last->message_type,
                             'content' => $last->content,
-                            'fileUrl' => $last->file_url,
+                            'fileUrl' => $last->file_url ? 'https://api.mybridgeinternational.org/mybridge-backend-files/public' . $last->file_url : null,
                             'createdAt' => $last->created_at,
                             'senderId' => $last->sender_id,
                         ] : null,
