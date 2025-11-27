@@ -48,7 +48,7 @@ class DiscoverController extends Controller
 
         // Discover = every user NOT in excludeIds
         $users = User::whereNotIn('id', $excludeIds)
-            ->select('id','full_name','email','specialisation','institution','category','profile_photo_path')
+            ->select('id','uuid','full_name','email','specialisation','institution','category','profile_photo_path')
             ->orderBy('full_name')
             ->get();
 
@@ -63,7 +63,7 @@ class DiscoverController extends Controller
     public function show($user_id)
     {
         $user = User::select(
-                'id','full_name','email','phone','category','specialisation',
+                'id','uuid','full_name','email','phone','category','specialisation',
                 'institution','license_number','approval_status','status','profile_photo_path'
             )->find($user_id);
 
