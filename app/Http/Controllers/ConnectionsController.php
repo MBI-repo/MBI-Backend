@@ -26,8 +26,8 @@ class ConnectionsController extends Controller
                           ->orWhere('receiver_id', $authUser->id);
                 })
                 ->with([
-                    'sender:id,full_name,email,specialisation,institution,category,profile_photo_path',
-                    'receiver:id,full_name,email,specialisation,institution,category,profile_photo_path'
+                    'sender:id,uuid,full_name,email,specialisation,institution,category,profile_photo_path',
+                    'receiver:id,uuid,full_name,email,specialisation,institution,category,profile_photo_path'   
                 ])
                 ->orderBy('updated_at', 'desc')
                 ->paginate($perPage);
@@ -72,7 +72,7 @@ class ConnectionsController extends Controller
             $authUser = Auth::user();
 
             // ensure target user exists
-            $user = User::select('id','full_name','email','specialisation','institution','category','profile_photo_path')
+            $user = User::select('id','uuid','full_name','email','specialisation','institution','category','profile_photo_path')
                         ->find($user_id);
 
             if (! $user) {
