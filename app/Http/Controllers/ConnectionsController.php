@@ -38,6 +38,7 @@ class ConnectionsController extends Controller
 
                 return [
                     'id' => $user->id,
+                    'uuid'=>$user->uuid,
                     'full_name' => $user->full_name,
                     'email' => $user->email,
                     'specialisation' => $user->specialisation,
