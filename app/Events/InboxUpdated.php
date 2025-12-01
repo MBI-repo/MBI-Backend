@@ -22,10 +22,21 @@ class InboxUpdated implements ShouldBroadcastNow
         $this->item = $item;
     }
 
-    public function broadcastOn(): array
+    public function oldbroadcastOn(): array
     {
         return [
             new PrivateChannel('inbox.' . $this->userId),
+            new PrivateChannel('inbox.' . $this->userUuid),
+        ];
+    }
+
+    public function broadcastOn(): array
+    {
+        return [
+            // channel the open-chat tab listens on
+            new PrivateChannel('conversation.' . $this->item['conversationUuid']),
+
+            // channel the conversation-list tab listens on
             new PrivateChannel('inbox.' . $this->userUuid),
         ];
     }
