@@ -115,6 +115,7 @@ Route::middleware('auth:sanctum')->prefix('v1')->group(function () {
     // Events - protected write
     Route::post('/events', [EventsController::class, 'store']);
     Route::put('/events/{id}', [EventsController::class, 'update']);
+    Route::post('/events/subscribe/{id}', [EventsController::class, 'subscribe']);
     // Route::get('/events/{id}', [EventsController::class, 'show']);
     Route::get('/events/fetchAllEvents/{id}', [EventsController::class, 'fetchAll']);
     Route::delete('/events/{id}', [EventsController::class, 'destroy']);

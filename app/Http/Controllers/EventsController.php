@@ -312,4 +312,41 @@ class EventsController extends Controller
         }
         return $slug;
     }
+
+    public function subscribe(Request $request, $id)
+    {
+        $event = Event::findOrFail($id);
+        $user = $request->user();
+
+        $data = $request->validate([
+            'full_name' => ['nullable', 'string'],
+            'email' => ['nullable', 'email'],
+            'phone' => ['nullable', 'string'],
+        ]);
+
+        $exists = \App\Models\EventSubscription::where('event_id', $event->id)
+            ->where('user_id', $user->id)
+            ->exists();
+        if ($exists) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Already subscribed to this event',
+            ], 409);
+        }
+
+        $subscription = \App\Models\EventSubscription::create([
+            'event_id' => $event->id,
+            'user_id' => $user->id,
+            'full_name' => $data['full_name'] ?? $user->full_name,
+            'email' => $data['email'] ?? $user->email,
+            'phone' => $data['phone'] ?? null,
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Subscribed to event successfully',
+            'event' => $event,
+            'subscription' => $subscription,
+        ]);
+    }
 }

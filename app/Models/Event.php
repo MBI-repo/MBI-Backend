@@ -41,4 +41,13 @@ class Event extends Model
     {
         return $this->belongsTo(User::class, 'organizer_id');
     }
+
+    public function subscribers() {
+        return $this->belongsToMany(User::class, 'event_subscribers');
+    }
+
+    public function subscriptions()
+    {
+        return $this->hasMany(EventSubscription::class);
+    }
 }
