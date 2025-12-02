@@ -27,7 +27,7 @@ class AuthController extends Controller
             'category' => 'required|string|max:255',
             'specialisation' => 'required|string|max:255',
             'institution' => 'required|string|max:255',
-            'license_number' => 'required|string|max:255|unique:users',
+            'license_number' => 'nullable|string|max:255|unique:users',
             'image' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:5120',
         ]);
 
