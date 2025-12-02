@@ -24,7 +24,7 @@ class ProfileController extends Controller
                     'uuid'                => $user->uuid,
                     'full_name'           => $user->full_name,
                     'email'               => $user->email,
-                    'image'  => $user->image,
+                    'image'               => $user->image,
                 ],
             ], 200);
 

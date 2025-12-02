@@ -27,10 +27,10 @@ Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
 
 Route::post('/forgot-password', [AuthController::class, 'forgotPassword']);
-// Route::post('/reset-password', [AuthController::class, 'resetPassword'])->name('resetpasswordfield');
-Route::get('/reset-password/{token}', function ($token, Request $request) {
-    return 'Reset token: ' . $token . ' for ' . $request->query('email');
-})->name('password.reset');
+Route::post('/reset-password', [AuthController::class, 'resetPassword'])->name('resetpasswordfield');
+Route::post('/logout', [AuthController::class, 'destroy'])->name('logout');
+
+
 
 Route::group(['prefix' => 'user'], function () {
     Route::get('/', [AuthController::class, 'user'])->name('fetchUser');

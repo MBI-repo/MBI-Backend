@@ -363,5 +363,27 @@ class AuthController extends Controller
             ], 500);
         }
     }
+    public function destroy(Request $request)
+    {
+        try {
+            $user = Auth::user();
 
+            if (! $user) {
+                return response()->json([
+                    'status'  => false,
+                    'message' => 'User is not authenticated.',
+                ], 401);
+            }
+            $request->user()->currentAccessToken()->delete();
+            return response()->json([
+                'status'  => true,
+                'message' => 'User logged out successfully!',
+            ], 200);
+        } catch (\Exception $e) {
+            return response()->json([
+                'status'  => false,
+                'message' => 'Logout failed: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
 }
