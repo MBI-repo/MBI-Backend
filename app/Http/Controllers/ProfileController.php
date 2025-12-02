@@ -24,7 +24,7 @@ class ProfileController extends Controller
                     'uuid'                => $user->uuid,
                     'full_name'           => $user->full_name,
                     'email'               => $user->email,
-                    'profile_photo_path'  => $user->profile_photo_path,
+                    'image'  => $user->image,
                 ],
             ], 200);
 
@@ -67,7 +67,7 @@ class ProfileController extends Controller
                     'uuid'               => $user->uuid,
                     'full_name'          => $user->full_name,
                     'email'              => $user->email,
-                    'profile_photo_path' => $user->profile_photo_path,
+                    'image' => $user->image,
                 ],
             ], 200);
 
@@ -87,6 +87,7 @@ class ProfileController extends Controller
 
     public function updateAvatar(Request $request)
     {
+        return 'debu';
         try {
             $user = Auth::user();
 
@@ -98,14 +99,14 @@ class ProfileController extends Controller
 
             $path = $file->store('profile_photos', 'public');
 
-            if ($user->profile_photo_path && !filter_var($user->profile_photo_path, FILTER_VALIDATE_URL)) {
-                $oldPath = $user->profile_photo_path;
+            if ($user->image && !filter_var($user->image, FILTER_VALIDATE_URL)) {
+                $oldPath = $user->image;
                 if (Storage::disk('public')->exists($oldPath)) {
                     Storage::disk('public')->delete($oldPath);
                 }
             }
 
-            $user->profile_photo_path = $path;
+            $user->image = $path;
             $user->save();
 
             return response()->json([
@@ -115,7 +116,7 @@ class ProfileController extends Controller
                     'uuid'                 => $user->uuid,
                     'full_name'          => $user->full_name,
                     'email'              => $user->email,
-                    'profile_photo_path' => $user->profile_photo_path,
+                    'image' => $user->image,
                 ],
             ], 200);
 
