@@ -26,11 +26,24 @@ use Illuminate\Support\Facades\Route;
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
 
+Route::post('/forgot-password', [AuthController::class, 'forgotPassword']);
+// Route::post('/reset-password', [AuthController::class, 'resetPassword'])->name('resetpasswordfield');
+Route::get('/reset-password/{token}', function ($token, Request $request) {
+    return 'Reset token: ' . $token . ' for ' . $request->query('email');
+})->name('password.reset');
+
 Route::group(['prefix' => 'user'], function () {
     Route::get('/', [AuthController::class, 'user'])->name('fetchUser');
     Route::post('/', [AuthController::class, 'update'])->middleware('auth:sanctum')->name('updateUser');
 });
 
+use App\Http\Controllers\ProfileController;
+
+Route::middleware('auth:sanctum')->prefix('profile')->as('profile.')->group(function () {
+    Route::get('account', [ProfileController::class, 'showAccount'])->name('account_show');
+    Route::put('account', [ProfileController::class, 'updateAccount'])->name('account_update');
+    Route::post('avatar', [ProfileController::class, 'updateAvatar'])->name('avatar_update');
+});
 
 Route::group(['prefix' => 'mbi'], function () {
     Route::post('contact-us/save', [HomepageController::class, 'saveContact'])->name('saveContact');

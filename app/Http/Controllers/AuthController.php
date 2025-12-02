@@ -11,6 +11,9 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
+use Illuminate\Support\Facades\Password;
+use Illuminate\Support\Facades\Auth;
+
 
 class AuthController extends Controller
 {
@@ -280,4 +283,85 @@ class AuthController extends Controller
         }
         return rtrim('https://api.mybridgeinternational.org/mybridge-backend-files/public', '/') . $path;
     }
+
+    public function forgotPassword(Request $request)
+    {
+        try {
+            $request->validate([
+                'email' => ['required', 'email', 'exists:users,email'],
+            ]);
+
+            $status = Password::sendResetLink(
+                $request->only('email')
+            );
+
+            if ($status === Password::RESET_LINK_SENT) {
+                return response()->json([
+                    'status' => true,
+                    'message' =>'We have emailed your password reset link!', //__($status), 
+                ], 200);
+            }
+
+            return response()->json([
+                'status' => false,
+                'message' => 'Failed to send reset link. Please try again.', //__($status)
+            ], 400);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Error: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+    public function resetPassword(Request $request)
+    {
+        try {
+            $request->validate([
+                'token'    => ['required'],
+                'email'    => ['required', 'email'],
+                'password' => ['required', 'confirmed', 'min:8'],
+            ]);
+
+            $status = Password::reset(
+                $request->only('email', 'password', 'password_confirmation', 'token'),
+                function (User $user, string $password) {
+                    $user->forceFill([
+                        'password' => Hash::make($password),
+                    ])->save();
+
+                    // optional: log user out of all devices
+                    $user->tokens()->delete(); // if using Sanctum personal access tokens
+
+                    // optional: auto-login after reset
+                    // Auth::login($user);
+                }
+            );
+
+            if ($status === Password::PASSWORD_RESET) {
+                return response()->json([
+                    'status' => true,
+                    'message' => __($status), // "Your password has been reset!"
+                ], 200);
+            }
+
+            return response()->json([
+                'status' => false,
+                'message' => __($status),
+            ], 400);
+
+        } catch (ValidationException $ve) {
+            return response()->json([
+                'status'  => false,
+                'message' => 'Validation error',
+                'errors'  => $ve->errors(),
+            ], 422);
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Error: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
 }
