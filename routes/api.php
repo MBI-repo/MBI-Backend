@@ -14,6 +14,7 @@ use App\Http\Controllers\SentController;
 use App\Http\Controllers\WaitingListController;
 use App\Models\WaitingList;
 use Illuminate\Http\Request;
+use Illuminate\Broadcasting\BroadcastController;
 use Illuminate\Support\Facades\Route;
 
 
@@ -91,6 +92,12 @@ Route::prefix('v1')->group(function () {
 
 // v1 Messaging & Groups API
 Route::middleware('auth:sanctum')->prefix('v1')->group(function () {
+    // Pusher/Echo private channel auth endpoints (aliases for Laravel broadcasting auth)
+    // These resolve 404s when the frontend is configured to call `/api/v1/api/pusher/auth`
+    // or `/api/v1/broadcasting/auth` for joining private/presence channels.
+    Route::post('/api/pusher/auth', [BroadcastController::class, 'authenticate']);
+    Route::post('/broadcasting/auth', [BroadcastController::class, 'authenticate']);
+
     // Conversations
     Route::post('/conversations/direct', [ConversationsController::class, 'startDirect']);
     Route::get('/conversations', [ConversationsController::class, 'index']);
