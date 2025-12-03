@@ -108,7 +108,7 @@ class ProfileController extends Controller
 
             $user->image = $path;
             $user->save();
-            $base_url = "https://api.mybridgeinternational.org/mybridge-backend-files/storage/app/public/"
+            $base_url = "https://api.mybridgeinternational.org/mybridge-backend-files/storage/app/public/";
 
             return response()->json([
                 'status'  => true,
