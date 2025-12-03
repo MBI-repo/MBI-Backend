@@ -9,10 +9,12 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Facades\Auth;
+use App\Mail\WelcomeMail;
 
 
 class AuthController extends Controller
@@ -27,9 +29,9 @@ class AuthController extends Controller
             'email' => 'required|string|email|max:255|unique:users',
             'phone' => 'required|string|max:20|unique:users',
             'password' => 'required|string|min:8|confirmed',
-            'category' => 'required|string|max:255',
-            'specialisation' => 'required|string|max:255',
-            'institution' => 'required|string|max:255',
+            'category' => 'nullable|string|max:255',
+            'specialisation' => 'nullable|string|max:255',
+            'institution' => 'nullable|string|max:255',
             'license_number' => 'nullable|string|max:255|unique:users',
             'image' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:5120',
         ]);
@@ -55,22 +57,14 @@ class AuthController extends Controller
             'status' => 'active',
         ]);
 
-        // Optional image upload: store PATH only; return absolute URL in response
+        // Optional image upload: store on public disk and persist PATH only
         if ($request->hasFile('image')) {
             $file = $request->file('image');
             $filename = (string) Str::uuid() . '.' . $file->getClientOriginalExtension();
-
-            // Prefer Hostinger path under mybridge-backend-files/public if present
-            $basePublicRoot = public_path('mybridge-backend-files/public');
-            $targetDir = is_dir($basePublicRoot)
-                ? $basePublicRoot . '/storage/profile_images'
-                : public_path('storage/profile_images');
-
-            File::ensureDirectoryExists($targetDir);
-            $file->move($targetDir, $filename);
-
-            // Persist PATH only
-            $user->image = '/storage/profile_images/' . $filename;
+            // Save into storage/app/public/profile_photos
+            Storage::disk('public')->putFileAs('profile_photos', $file, $filename);
+            // Persist the public URL path (served via /storage symlink)
+            $user->image = '/storage/profile_photos/' . $filename;
             $user->save();
         }
 
@@ -79,6 +73,13 @@ class AuthController extends Controller
         // Ensure image field is an absolute URL in response
         if (!empty($user->image)) {
             $user->setAttribute('image', $this->toAbsoluteUrl($user->image));
+        }
+
+        // Send welcome email (non-blocking for response)
+        try {
+            Mail::to($user->email)->send(new WelcomeMail($user));
+        } catch (\Throwable $mailException) {
+            // Swallow mail exceptions to avoid blocking registration
         }
 
         return response()->json([
@@ -243,11 +244,11 @@ class AuthController extends Controller
                 // Store new image and persist PATH only
                 $filename = (string) Str::uuid() . '.' . $file->getClientOriginalExtension();
                 $targetDir = is_dir($basePublicRoot)
-                    ? $basePublicRoot . '/storage/profile_images'
-                    : public_path('storage/profile_images');
+                    ? $basePublicRoot . '/storage/profile_photos'
+                    : public_path('storage/profile_photos');
                 File::ensureDirectoryExists($targetDir);
                 $file->move($targetDir, $filename);
-                $user->image = $base_url . 'profile_images/' . $filename;
+                $user->image = $base_url . 'profile_photos/' . $filename;
             }
 
             $user->save();
