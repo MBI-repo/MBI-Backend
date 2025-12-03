@@ -16,7 +16,7 @@ class ProfileController extends Controller
     {
         try {
             $user = Auth::user();
-
+            $base_url = "https://api.mybridgeinternational.org/mybridge-backend-files/storage/app/public/";
             return response()->json([
                 'status'  => true,
                 'message' => 'Account information fetched successfully.',
@@ -24,7 +24,7 @@ class ProfileController extends Controller
                     'uuid'                => $user->uuid,
                     'full_name'           => $user->full_name,
                     'email'               => $user->email,
-                    'image'               => $user->image,
+                    'image'               =>  $base_url . $user->image,
                 ],
             ], 200);
 
@@ -59,6 +59,7 @@ class ProfileController extends Controller
                 $user->password = Hash::make($validated['password']);
             }
             $user->save();
+            $base_url = "https://api.mybridgeinternational.org/mybridge-backend-files/storage/app/public/";
 
             return response()->json([
                 'status'  => true,
@@ -67,7 +68,7 @@ class ProfileController extends Controller
                     'uuid'               => $user->uuid,
                     'full_name'          => $user->full_name,
                     'email'              => $user->email,
-                    'image' => $user->image,
+                    'image' =>  $base_url . $user->image,
                 ],
             ], 200);
 
@@ -107,6 +108,7 @@ class ProfileController extends Controller
 
             $user->image = $path;
             $user->save();
+            $base_url = "https://api.mybridgeinternational.org/mybridge-backend-files/storage/app/public/"
 
             return response()->json([
                 'status'  => true,
@@ -115,7 +117,7 @@ class ProfileController extends Controller
                     'uuid'                 => $user->uuid,
                     'full_name'          => $user->full_name,
                     'email'              => $user->email,
-                    'image' => $user->image,
+                    'image' =>  $base_url . $user->image,
                 ],
             ], 200);
 

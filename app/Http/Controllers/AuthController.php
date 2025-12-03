@@ -238,6 +238,7 @@ class AuthController extends Controller
                         }
                     }
                 }
+                $base_url = "https://api.mybridgeinternational.org/mybridge-backend-files/storage/app/public/";
 
                 // Store new image and persist PATH only
                 $filename = (string) Str::uuid() . '.' . $file->getClientOriginalExtension();
@@ -246,7 +247,7 @@ class AuthController extends Controller
                     : public_path('storage/profile_images');
                 File::ensureDirectoryExists($targetDir);
                 $file->move($targetDir, $filename);
-                $user->image = '/storage/profile_images/' . $filename;
+                $user->image = $base_url . 'profile_images/' . $filename;
             }
 
             $user->save();
@@ -298,7 +299,7 @@ class AuthController extends Controller
             if ($status === Password::RESET_LINK_SENT) {
                 return response()->json([
                     'status' => true,
-                    'message' =>'We have emailed your password reset link!', //__($status), 
+                    'message' => 'We have emailed your password reset link!', //__($status), 
                 ], 200);
             }
 
@@ -306,7 +307,6 @@ class AuthController extends Controller
                 'status' => false,
                 'message' => 'Failed to send reset link. Please try again.', //__($status)
             ], 400);
-
         } catch (\Exception $e) {
             return response()->json([
                 'status' => false,
@@ -349,7 +349,6 @@ class AuthController extends Controller
                 'status' => false,
                 'message' => __($status),
             ], 400);
-
         } catch (ValidationException $ve) {
             return response()->json([
                 'status'  => false,
