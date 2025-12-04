@@ -9,18 +9,20 @@ use Illuminate\Support\Facades\DB;
 
 class ReceivedController extends Controller
 {
-        public function index(Request $request)
+    public function index(Request $request)
     {
         try {
             $authUser = Auth::user();
 
             $connections = Connection::where('receiver_id', $authUser->id)
                 ->where('status', 'pending')
-                ->with('sender:id,full_name,email,specialisation,institution,category,profile_photo_path')
+                ->with('sender:id,full_name,email,specialisation,institution,category,image')
                 ->orderBy('created_at', 'desc')
                 ->get()
                 ->map(function ($connection) {
                     $s = $connection->sender;
+                    $base_url = "https://api.mybridgeinternational.org/mybridge-backend-files/storage/app/public/";
+
                     return [
                         'connection_id' => $connection->id,
                         'sender' => [
@@ -30,7 +32,7 @@ class ReceivedController extends Controller
                             'specialisation' => $s->specialisation,
                             'institution' => $s->institution,
                             'category' => $s->category,
-                            'profile_photo_path' => $s->profile_photo_path,
+                            'profile_photo_path' => $base_url . $s->image,
                         ],
                         'sent_at' => $connection->created_at ? $connection->created_at->toDateTimeString() : null,
                     ];
@@ -41,7 +43,6 @@ class ReceivedController extends Controller
                 'message' => 'Received invitations fetched.',
                 'data' => $connections
             ], 200);
-
         } catch (\Exception $e) {
             return response()->json([
                 'status' => false,
@@ -72,7 +73,7 @@ class ReceivedController extends Controller
                 $connection->update(['status' => 'accepted']);
             });
 
-            $sender = $connection->sender()->select('id','full_name','email','specialisation','institution','category','profile_photo_path')->first();
+            $sender = $connection->sender()->select('id', 'full_name', 'email', 'specialisation', 'institution', 'category', 'image')->first();
 
             return response()->json([
                 'status' => true,
@@ -83,7 +84,6 @@ class ReceivedController extends Controller
                     'connection_status' => 'connected'
                 ]
             ], 200);
-
         } catch (\Exception $e) {
             return response()->json([
                 'status' => false,
@@ -114,7 +114,7 @@ class ReceivedController extends Controller
             });
             // $connection->update(['status' => 'rejected']);
 
-            $sender = $connection->sender()->select('id','full_name','email','specialisation','institution','category','profile_photo_path')->first();
+            $sender = $connection->sender()->select('id', 'full_name', 'email', 'specialisation', 'institution', 'category', 'image')->first();
 
             return response()->json([
                 'status' => true,
@@ -125,7 +125,6 @@ class ReceivedController extends Controller
                     'connection_status' => 'rejected'
                 ]
             ], 200);
-
         } catch (\Exception $e) {
             return response()->json([
                 'status' => false,

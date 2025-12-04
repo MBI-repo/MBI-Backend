@@ -26,8 +26,8 @@ class ConnectionsController extends Controller
                           ->orWhere('receiver_id', $authUser->id);
                 })
                 ->with([
-                    'sender:id,uuid,full_name,email,specialisation,institution,category,profile_photo_path',
-                    'receiver:id,uuid,full_name,email,specialisation,institution,category,profile_photo_path'   
+                    'sender:id,uuid,full_name,email,specialisation,institution,category,image',
+                    'receiver:id,uuid,full_name,email,specialisation,institution,category,image'   
                 ])
                 ->orderBy('updated_at', 'desc')
                 ->paginate($perPage);
@@ -35,6 +35,8 @@ class ConnectionsController extends Controller
             // Transform paginator items to return "other" user only
             $connections->getCollection()->transform(function ($connection) use ($authUser) {
                 $user = $connection->sender_id === $authUser->id ? $connection->receiver : $connection->sender;
+                
+                $base_url = "https://api.mybridgeinternational.org/mybridge-backend-files/storage/app/public/";
 
                 return [
                     'id' => $user->id,
@@ -44,7 +46,7 @@ class ConnectionsController extends Controller
                     'specialisation' => $user->specialisation,
                     'institution' => $user->institution,
                     'category' => $user->category,
-                    'profile_photo_path' => $user->profile_photo_path,
+                    'profile_photo_path' => $base_url. $user->image,
                 ];
             });
 
@@ -72,7 +74,7 @@ class ConnectionsController extends Controller
             $authUser = Auth::user();
 
             // ensure target user exists
-            $user = User::select('id','uuid','full_name','email','specialisation','institution','category','profile_photo_path')
+            $user = User::select('id','uuid','full_name','email','specialisation','institution','category','image')
                         ->find($user_id);
 
             if (! $user) {

@@ -16,11 +16,12 @@ class SentController extends Controller
 
             $connections = Connection::where('sender_id', $authUser->id)
                 ->where('status', 'pending')
-                ->with('receiver:id,full_name,email,specialisation,institution,category,profile_photo_path')
+                ->with('receiver:id,full_name,email,specialisation,institution,category,image')
                 ->orderBy('created_at', 'desc')
                 ->get()
                 ->map(function ($connection) {
                     $r = $connection->receiver;
+                    $base_url = "https://api.mybridgeinternational.org/mybridge-backend-files/storage/app/public/";
                     return [
                         'connection_id' => $connection->id,
                         'receiver' => [
@@ -30,7 +31,7 @@ class SentController extends Controller
                             'specialisation' => $r->specialisation,
                             'institution' => $r->institution,
                             'category' => $r->category,
-                            'profile_photo_path' => $r->profile_photo_path,
+                            'profile_photo_path' => $base_url . $r->image,
                         ],
                         'sent_at' => $connection->created_at ? $connection->created_at->toDateTimeString() : null,
                     ];
@@ -73,7 +74,7 @@ class SentController extends Controller
             }
 
             // Keep receiver's details for UI update after deletion
-            $receiver = $connection->receiver()->select('id','full_name','email','specialisation','institution','category','profile_photo_path')->first();
+            $receiver = $connection->receiver()->select('id','full_name','email','specialisation','institution','category','image')->first();
 
             // Delete the pending invitation (withdraw)
             $connection->delete();
