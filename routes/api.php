@@ -4,6 +4,8 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\ConnectionsController;
 use App\Http\Controllers\ConversationsController;
 use App\Http\Controllers\DiscoverController;
+use App\Http\Controllers\MarketplaceController;
+use App\Http\Controllers\ProductsController;
 use App\Http\Controllers\EventsController;
 use App\Http\Controllers\GroupsController;
 use App\Http\Controllers\HomepageController;
@@ -101,7 +103,14 @@ Route::prefix('v1')->group(function () {
     // Route::get('/events', [EventsController::class, 'index']);
     Route::get('/events/{id}', [EventsController::class, 'show']);
     Route::get('/fetch-all-events', [EventsController::class, 'fetchAll']);
+
+    // Public product browsing
+    Route::get('/products', [ProductsController::class, 'index']);
+    Route::get('/products/donation', [ProductsController::class, 'donationProduct']);
+    Route::get('/products/{id}', [ProductsController::class, 'show']);
 });
+
+
 
 // v1 Messaging & Groups API
 Route::middleware('auth:sanctum')->prefix('v1')->group(function () {
@@ -139,4 +148,13 @@ Route::middleware('auth:sanctum')->prefix('v1')->group(function () {
     // Route::get('/events/{id}', [EventsController::class, 'show']);
     Route::get('/events/fetchAllEvents/{id}', [EventsController::class, 'fetchAll']);
     Route::delete('/events/{id}', [EventsController::class, 'destroy']);
+
+    // Marketplace: seller docs
+    Route::post('/marketplace/seller/docs', [MarketplaceController::class, 'updateSellerDocs']);
+
+    // Product management (seller only for write)
+    Route::post('/products', [ProductsController::class, 'store']);
+    Route::put('/products/{id}', [ProductsController::class, 'update']);
+    Route::delete('/products/{id}', [ProductsController::class, 'destroy']);
+    Route::delete('/products/images/{imageId}', [ProductsController::class, 'destroyImage']);
 });

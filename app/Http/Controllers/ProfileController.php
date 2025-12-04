@@ -6,6 +6,8 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Validator;
+use App\Models\User;
 
 
 
@@ -39,13 +41,26 @@ class ProfileController extends Controller
     public function updateAccount(Request $request)
     {
         try {
-            $user = Auth::user();
-
-            $validated = $request->validate([
-                'full_name'   => ['nullable', 'string', 'max:255'],
+            $user = User::find(Auth::id());
+            if (!$user) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Authenticated user not found',
+                ], 401);
+            }
+            $validator = Validator::make($request->all(), [
+                'full_name'    => ['nullable', 'string', 'max:255'],
                 'old_password' => ['required_with:password', 'string'],
-                'password'    => ['nullable', 'string', 'min:8', 'confirmed'],
+                'password'     => ['nullable', 'string', 'min:8', 'confirmed'],
             ]);
+            if ($validator->fails()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Validation errors',
+                    'errors'  => $validator->errors(),
+                ], 422);
+            }
+            $validated = $validator->validated();
             if (!empty($validated['full_name'])) {
                 $user->full_name = $validated['full_name'];
             }
@@ -72,12 +87,6 @@ class ProfileController extends Controller
                 ],
             ], 200);
 
-        } catch (\Illuminate\Validation\ValidationException $ve) {
-            return response()->json([
-                'status'  => false,
-                'message' => 'Validation error.',
-                'errors'  => $ve->errors(),
-            ], 422);
         } catch (\Exception $e) {
             return response()->json([
                 'status'  => false,
@@ -89,11 +98,23 @@ class ProfileController extends Controller
     public function updateAvatar(Request $request)
     {
         try {
-            $user = Auth::user();
-
-            $request->validate([
+            $user = User::find(Auth::id());
+            if (!$user) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Authenticated user not found',
+                ], 401);
+            }
+            $validator = Validator::make($request->all(), [
                 'avatar' => ['required', 'image', 'mimes:jpeg,jpg,png,gif,webp', 'max:2048'],
             ]);
+            if ($validator->fails()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Validation errors',
+                    'errors'  => $validator->errors(),
+                ], 422);
+            }
 
             $file   = $request->file('avatar');
 
@@ -121,12 +142,6 @@ class ProfileController extends Controller
                 ],
             ], 200);
 
-        } catch (\Illuminate\Validation\ValidationException $ve) {
-            return response()->json([
-                'status'  => false,
-                'message' => 'Validation error.',
-                'errors'  => $ve->errors(),
-            ], 422);
         } catch (\Exception $e) {
             return response()->json([
                 'status'  => false,
