@@ -26,7 +26,7 @@ class WelcomeMail extends Mailable
      */
     public function build(): self
     {
-        return $this->subject('Welcome to MyBridge International')
+        return $this->subject('Welcome to My Bridge International')
             ->view('emails.welcome')
             ->with([
                 'user' => $this->user,

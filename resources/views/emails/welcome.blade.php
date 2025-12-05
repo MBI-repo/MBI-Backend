@@ -12,7 +12,7 @@
     </head>
 <body>
     <div class="container">
-        <h2>Welcome to MyBridge International</h2>
+        <h2>Welcome to My Bridge International</h2>
         <p>Hi {{ $user->full_name ?? 'there' }},</p>
         <p>
             Your account has been created successfully. We’re excited to have you on board!
@@ -26,7 +26,7 @@
         </p>
         <p style="margin-top: 24px;">
             Cheers,<br />
-            The MyBridge Team
+            The My Bridge Team
         </p>
     </div>
 </body>
