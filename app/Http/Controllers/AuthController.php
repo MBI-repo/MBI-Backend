@@ -188,6 +188,9 @@ class AuthController extends Controller
                 'institution' => 'sometimes|string|max:255',
                 'license_number' => 'sometimes|string|max:255|unique:users,license_number,' . ($user ? $user->id : 'NULL'),
                 'image' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:5120',
+                'facility_name' => 'sometimes|string|max:255',
+                'country' => 'sometimes|string|max:255',
+                'medical_licence' => 'nullable|file|mimes:pdf,jpeg,png,jpg,gif,webp|max:5120',
                 // email and phone are intentionally excluded from updates
             ]);
 
@@ -216,39 +219,46 @@ class AuthController extends Controller
             if (array_key_exists('license_number', $data)) {
                 $user->license_number = $data['license_number'];
             }
+            if (array_key_exists('facility_name', $data)) {
+                $user->facility_name = $data['facility_name'];
+            }
+            if (array_key_exists('country', $data)) {
+                $user->country = $data['country'];
+            }
 
-            // Optional image upload: delete existing file then store and persist PATH only
+            // Optional image upload: delete existing file then store with Storage and persist '/storage' PATH
             if ($request->hasFile('image')) {
                 $file = $request->file('image');
-                $basePublicRoot = public_path('mybridge-backend-files/public');
-
-                // Attempt to delete old file if it exists
+                // Attempt to delete previous image stored via '/storage' path
                 if (!empty($user->image)) {
-                    $urlPath = parse_url($user->image, PHP_URL_PATH) ?: $user->image;
-                    if ($urlPath && Str::startsWith($urlPath, '/')) {
-                        $existingPath = ltrim($urlPath, '/');
-                        // Try delete from both possible locations
-                        $publicStorageFile = public_path($existingPath);
-                        $publicBackendFile = is_dir($basePublicRoot)
-                            ? $basePublicRoot . '/' . $existingPath
-                            : null;
-                        if (file_exists($publicStorageFile)) {
-                            @unlink($publicStorageFile);
-                        } elseif ($publicBackendFile && file_exists($publicBackendFile)) {
-                            @unlink($publicBackendFile);
-                        }
+                    $prev = $user->image;
+                    // convert '/storage/dir/file.jpg' => 'dir/file.jpg'
+                    $relative = ltrim(Str::replaceFirst('/storage/', '', $prev), '/');
+                    if (!empty($relative) && Storage::disk('public')->exists($relative)) {
+                        Storage::disk('public')->delete($relative);
                     }
                 }
-                $base_url = "https://api.mybridgeinternational.org/mybridge-backend-files/storage/app/public/";
-
-                // Store new image and persist PATH only
+                // Store new image: storage/app/public/profile_photos
                 $filename = (string) Str::uuid() . '.' . $file->getClientOriginalExtension();
-                $targetDir = is_dir($basePublicRoot)
-                    ? $basePublicRoot . '/storage/profile_photos'
-                    : public_path('storage/profile_photos');
-                File::ensureDirectoryExists($targetDir);
-                $file->move($targetDir, $filename);
-                $user->image = $base_url . 'profile_photos/' . $filename;
+                Storage::disk('public')->putFileAs('profile_photos', $file, $filename);
+                // Persist '/storage/...' path for frontend access via symlink
+                $user->image = '/storage/profile_photos/' . $filename;
+            }
+
+            // Optional medical_licence upload: store on public disk under medical_personnel
+            if ($request->hasFile('medical_licence')) {
+                $file = $request->file('medical_licence');
+                // Delete old medical_licence if present
+                if (!empty($user->medical_licence)) {
+                    $prev = $user->medical_licence;
+                    $relative = ltrim(Str::replaceFirst('/storage/', '', $prev), '/');
+                    if (!empty($relative) && Storage::disk('public')->exists($relative)) {
+                        Storage::disk('public')->delete($relative);
+                    }
+                }
+                $filename = (string) Str::uuid() . '.' . $file->getClientOriginalExtension();
+                Storage::disk('public')->putFileAs('medical_personnel', $file, $filename);
+                $user->medical_licence = '/storage/medical_personnel/' . $filename;
             }
 
             $user->save();
@@ -256,6 +266,10 @@ class AuthController extends Controller
             // Ensure absolute URL in response
             if (!empty($user->image)) {
                 $user->setAttribute('image', $this->toAbsoluteUrl($user->image));
+            }
+            if (!empty($user->medical_licence)) {
+                $base_url = "https://api.mybridgeinternational.org/mybridge-backend-files/storage/app/public/";
+                $user->setAttribute('medical_licence', $base_url . ltrim($user->medical_licence, '/'));
             }
 
             return response()->json([
