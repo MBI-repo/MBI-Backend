@@ -258,7 +258,7 @@ class AuthController extends Controller
                 }
                 $filename = (string) Str::uuid() . '.' . $file->getClientOriginalExtension();
                 Storage::disk('public')->putFileAs('medical_personnel', $file, $filename);
-                $user->medical_licence = '/storage/medical_personnel/' . $filename;
+                $user->medical_licence = '/medical_personnel/' . $filename;
             }
 
             $user->save();
