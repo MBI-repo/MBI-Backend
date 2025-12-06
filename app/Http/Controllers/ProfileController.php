@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 use App\Models\User;
+use App\Models\ProfessionalProfile;
 
 
 
@@ -149,4 +150,107 @@ class ProfileController extends Controller
             ], 500);
         }
     }
+
+    public function viewProfile()
+    {
+        try {
+            $user = User::find(Auth::id());
+            if (! $user) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Authenticated user not found',
+                ], 401);
+            }
+
+            $profile = $user->professionalProfile;
+
+            //dd($profile);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Professional profile fetched successfully.',
+                'data'    => [
+                    'bio'              => $profile?->bio,
+                    'areasOfExpertise' => $profile?->areas_of_expertise ?? [],
+                    'educations'       => $profile?->educations ?? [],
+                    'experiences'      => $profile?->experiences ?? [],
+                    'certifications'   => $profile?->certifications ?? [],
+                    'publications'     => $profile?->publications ?? [],
+                    'memberships'      => $profile?->memberships ?? [],
+                    'awards'           => $profile?->awards ?? [],
+                ],
+            ], 200);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    public function updateProfile(Request $request)
+    {
+        try {
+            $user = User::find(Auth::id());
+            if (! $user) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Authenticated user not found',
+                ], 401);
+            }
+
+            $validator = Validator::make($request->all(), [
+                'professionalProfile' => ['required', 'array'],
+                'professionalProfile.bio' => ['nullable', 'string'],
+                'professionalProfile.areasOfExpertise' => ['nullable', 'array'],
+                'professionalProfile.areasOfExpertise.*' => ['string'],
+                'professionalProfile.educations' => ['nullable', 'array'],
+                'professionalProfile.experiences' => ['nullable', 'array'],
+                'professionalProfile.certifications' => ['nullable', 'array'],
+                'professionalProfile.publications' => ['nullable', 'array'],
+                'professionalProfile.memberships' => ['nullable', 'array'],
+                'professionalProfile.awards' => ['nullable', 'array'],
+            ]);
+
+            if ($validator->fails()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Validation errors',
+                    'errors'  => $validator->errors(),
+                ], 422);
+            }
+
+            $data  = $request->input('professionalProfile', []);
+            $uuid  = $user->uuid;
+
+            // get or create profile
+            $profile = ProfessionalProfile::firstOrCreate(
+                ['user_uuid' => $uuid],
+                []
+            );
+
+            $profile->bio               = $data['bio'] ?? $profile->bio;
+            $profile->areas_of_expertise = $data['areasOfExpertise'] ?? [];
+            $profile->educations        = $data['educations'] ?? [];
+            $profile->experiences       = $data['experiences'] ?? [];
+            $profile->certifications    = $data['certifications'] ?? [];
+            $profile->publications      = $data['publications'] ?? [];
+            $profile->memberships       = $data['memberships'] ?? [];
+            $profile->awards            = $data['awards'] ?? [];
+            $profile->save();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Professional profile updated successfully.',
+            ], 200);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
 }

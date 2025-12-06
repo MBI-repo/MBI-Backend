@@ -58,6 +58,13 @@ class User extends Authenticatable
         })->where('status', 'pending');
     }
 
+    // for one-to-one relationship with ProfessionalProfile
+    public function professionalProfile()
+    {
+        return $this->hasOne(ProfessionalProfile::class, 'user_uuid', 'uuid');
+    }
+
+
     protected $hidden = [
         'password',
         'remember_token',

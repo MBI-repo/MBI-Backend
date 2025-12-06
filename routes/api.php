@@ -42,9 +42,14 @@ Route::group(['prefix' => 'user'], function () {
 use App\Http\Controllers\ProfileController;
 
 Route::middleware('auth:sanctum')->prefix('profile')->as('profile.')->group(function () {
-    Route::get('account', [ProfileController::class, 'showAccount'])->name('account_show');
-    Route::put('account', [ProfileController::class, 'updateAccount'])->name('account_update');
-    Route::any('avatar', [ProfileController::class, 'updateAvatar'])->name('avatar_update');
+    Route::get('/account', [ProfileController::class, 'showAccount'])->name('account_show');
+    Route::put('/account', [ProfileController::class, 'updateAccount'])->name('account_update');
+    Route::any('/avatar', [ProfileController::class, 'updateAvatar'])->name('avatar_update');
+
+    Route::get('/view-profile', [ProfileController::class, 'viewProfile'])->name('profile_show');
+    Route::put('/update-profile', [ProfileController::class, 'updateProfile'])->name('profile_update');
+
+
 });
 
 Route::group(['prefix' => 'mbi'], function () {
