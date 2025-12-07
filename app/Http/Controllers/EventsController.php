@@ -43,27 +43,42 @@ class EventsController extends Controller
         return response()->json(['events' => $events]);
     }
 
-    public function show($id)
-    {
-        try {
-            $event = Event::findOrFail($id);
-            return response()->json([
-                'success'=>true,
-                'message' => 'Event fetched successfully!',
-                'event' => $event]);
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Event fetch failed',
-                'error' => $e->getMessage()
-            ], 500);
-        }
+   public function show($id)
+{
+    try {
+        $event = Event::findOrFail($id);
+        $base_url = "https://admin.mybridgeinternational.org/mbi-admin-files/public/";
+
+        // Update image URL
+        $event->image_url = $base_url . ltrim($event->image_url, '/');
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Event fetched successfully!',
+            'event' => $event
+        ]);
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Event fetch failed',
+            'error' => $e->getMessage()
+        ], 500);
     }
+}
+
 
     public function fetchAll()
     {
         try {
             $events = Event::latest()->get();
+            $base_url = "https://admin.mybridgeinternational.org/mbi-admin-files/public/";
+
+            // Loop through each event and modify image_url
+            $events->transform(function ($event) use ($base_url) {
+                $event->image_url = $base_url . ltrim($event->image_url, '/');
+                return $event;
+            });
+
             return response()->json([
                 'success' => true,
                 'message' => 'Event fetched successfully',
@@ -77,6 +92,7 @@ class EventsController extends Controller
             ], 500);
         }
     }
+
 
     public function store(Request $request)
     {
