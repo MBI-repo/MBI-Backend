@@ -2,19 +2,22 @@
 
 namespace App\Http\Controllers;
 
+use App\Mail\WelcomeMail;
+use App\Models\Event;
+use App\Models\Message;
+use App\Models\Connection;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
-use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Validator;
-use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Password;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
-use Illuminate\Support\Facades\Password;
-use Illuminate\Support\Facades\Auth;
-use App\Mail\WelcomeMail;
 
 
 class AuthController extends Controller
@@ -164,8 +167,35 @@ class AuthController extends Controller
     public function user(Request $request)
     {
         $user = $request->user();
-        if ($user && !empty($user->image)) {
-            $user->setAttribute('image', $this->toAbsoluteUrl($user->image));
+        if ($user) {
+            // Total published events count (simple overall metric)
+            $eventCount = Event::count();
+
+            // Unread messages: messages in conversations the user participates in, not sent by the user, with null read_at
+            $messageCount = Message::whereNull('read_at')
+                ->where('sender_id', '!=', $user->id)
+                ->whereHas('conversation', function ($q) use ($user) {
+                    $q->whereHas('participants', function ($pq) use ($user) {
+                        $pq->where('users.id', $user->id);
+                    });
+                })
+                ->count();
+
+            // Network count: accepted connections where user is sender or receiver
+            $networkCount = Connection::accepted()
+                ->where(function ($q) use ($user) {
+                    $q->where('sender_id', $user->id)
+                      ->orWhere('receiver_id', $user->id);
+                })
+                ->count();
+
+            $user->setAttribute('message_count', $messageCount);
+            $user->setAttribute('network_count', $networkCount);
+            $user->setAttribute('event_count', $eventCount);
+
+            if (!empty($user->image)) {
+                $user->setAttribute('image', $this->toAbsoluteUrl($user->image));
+            }
         }
 
         return response()->json([

@@ -43,28 +43,48 @@ class EventsController extends Controller
         return response()->json(['events' => $events]);
     }
 
-   public function show($id)
-{
-    try {
-        $event = Event::findOrFail($id);
-        $base_url = "https://admin.mybridgeinternational.org/mbi-admin-files/public/";
+    public function show($id)
+    {
+        try {
+            // Support numeric id or slug/uuid
+            if (is_numeric($id)) {
+                $event = Event::find($id);
+            } else {
+                $event = Event::where('slug', $id)->first();
+                if (!$event) {
+                    // Attempt uuid if present in schema (harmless if not)
+                    $event = Event::where('uuid', $id)->first();
+                }
+            }
 
-        // Update image URL
-        $event->image_url = $base_url . ltrim($event->image_url, '/');
+            if (!$event) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Event not found',
+                ], 404);
+            }
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Event fetched successfully!',
-            'event' => $event
-        ]);
-    } catch (\Exception $e) {
-        return response()->json([
-            'success' => false,
-            'message' => 'Event fetch failed',
-            'error' => $e->getMessage()
-        ], 500);
+            $base_url = "https://admin.mybridgeinternational.org/mbi-admin-files/public/";
+
+            // Ensure full image URL only when it's a relative path
+            $img = $event->image_url;
+            if (!empty($img) && !str_starts_with($img, 'http://') && !str_starts_with($img, 'https://')) {
+                $event->image_url = $base_url . ltrim($img, '/');
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Event fetched successfully',
+                'event' => $event
+            ]);
+        } catch (\Throwable $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Event fetch failed',
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
-}
 
 
     public function fetchAll()
@@ -75,7 +95,10 @@ class EventsController extends Controller
 
             // Loop through each event and modify image_url
             $events->transform(function ($event) use ($base_url) {
-                $event->image_url = $base_url . ltrim($event->image_url, '/');
+                $img = $event->image_url;
+                if (!empty($img) && !str_starts_with($img, 'http://') && !str_starts_with($img, 'https://')) {
+                    $event->image_url = $base_url . ltrim($img, '/');
+                }
                 return $event;
             });
 
