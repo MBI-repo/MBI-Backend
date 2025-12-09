@@ -11,7 +11,7 @@ return new class extends Migration
      */
     public function up(): void
     {
-       Schema::create('notification_settings', function (Blueprint $table) {
+       Schema::create('notifications', function (Blueprint $table) {
             $table->id();
             $table->uuid('user_uuid')->unique();
             $table->boolean('notify_network')->default(true);
