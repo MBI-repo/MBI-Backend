@@ -11,6 +11,7 @@ use App\Http\Controllers\GroupsController;
 use App\Http\Controllers\HomepageController;
 use App\Http\Controllers\MessagesController;
 use App\Http\Controllers\NetworkController;
+use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\ReceivedController;
 use App\Http\Controllers\SentController;
 use App\Http\Controllers\WaitingListController;
@@ -48,6 +49,16 @@ Route::middleware('auth:sanctum')->prefix('profile')->as('profile.')->group(func
 
     Route::get('/view-profile', [ProfileController::class, 'viewProfile'])->name('profile_show');
     Route::put('/update-profile', [ProfileController::class, 'updateProfile'])->name('profile_update');
+
+
+});
+
+Route::middleware('auth:sanctum')->prefix('notification')->as('notification.')->group(function () {
+    Route::get('/view-notificationsettings', [NotificationController::class, 'viewSettings'])->name('settings_show');
+    Route::put('/update-notificationsettings', [NotificationController::class, 'updateSettings'])->name('settings_update');
+    // Route::any('/avatar', [NotificationController::class, 'updateAvatar'])->name('avatar_update');
+    // Route::get('/view-profile', [NotificationController::class, 'viewProfile'])->name('profile_show');
+    // Route::put('/update-profile', [NotificationController::class, 'updateProfile'])->name('profile_update');
 
 
 });
