@@ -15,17 +15,19 @@
         <h2>Welcome to My Bridge International</h2>
         <p>Hi {{ $user->full_name ?? 'there' }},</p>
         <p>
-            Your account has been created successfully. We’re excited to have you on board!
+            Your account has been created successfully. Welcome to My Bridge International!
         </p>
         <p>
-            You can now log in and start connecting with professionals, participate in conversations,
-            and explore upcoming events.
+            You can now log in to connect with professionals, join conversations, and explore upcoming events across our global community.
+
+
         </p>
         <p>
-            If you have any questions, reply to this email—we’re here to help.
-        </p>
+    If you ever need support, reply to this email. We're here to help.
+   
+    </p>
         <p style="margin-top: 24px;">
-            Cheers,<br />
+            Warm regards,<br />
             The My Bridge Team
         </p>
     </div>
