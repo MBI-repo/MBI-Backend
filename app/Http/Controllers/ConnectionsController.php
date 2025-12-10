@@ -13,7 +13,7 @@ class ConnectionsController extends Controller
      * Fetch all accepted connections for the authenticated user.
      * GET /network/connections
      */
-    public function fetch(Request $request)
+    public function view(Request $request)
     {
         try {
             $authUser = Auth::user();
@@ -68,7 +68,7 @@ class ConnectionsController extends Controller
      * Open or create a message thread with a connected user.
      * GET /network/connections/message/{user_id}
      */
-    public function create($user_id)
+    public function createMessage($user_id)
     {
         try {
             $authUser = Auth::user();

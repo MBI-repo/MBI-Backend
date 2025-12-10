@@ -42,26 +42,26 @@ Route::group(['prefix' => 'user'], function () {
 
 use App\Http\Controllers\ProfileController;
 
-Route::middleware('auth:sanctum')->prefix('profile')->as('profile.')->group(function () {
-    Route::get('/account', [ProfileController::class, 'showAccount'])->name('account_show');
-    Route::put('/account', [ProfileController::class, 'updateAccount'])->name('account_update');
-    Route::any('/avatar', [ProfileController::class, 'updateAvatar'])->name('avatar_update');
+Route::middleware('auth:sanctum')->prefix('settings')->as('settings.')->group(function () {
+    Route::get('/account-info/show', [ProfileController::class, 'showAccount'])->name('account_show');
+    Route::put('/account-info/update', [ProfileController::class, 'updateAccount'])->name('account_update');
+    Route::any('/account-info/avatar/update', [ProfileController::class, 'updateAvatar'])->name('avatar_update');
 
-    Route::get('/view-profile', [ProfileController::class, 'viewProfile'])->name('profile_show');
-    Route::put('/update-profile', [ProfileController::class, 'updateProfile'])->name('profile_update');
+    Route::get('/profile/show', [ProfileController::class, 'viewProfile'])->name('profile_show');
+    Route::put('/profile/update', [ProfileController::class, 'updateProfile'])->name('profile_update');
 
-
+    Route::get('/notification/show', [NotificationController::class, 'viewSettings'])->name('settings_show');
+    Route::put('/notification/update', [NotificationController::class, 'updateSettings'])->name('settings_update');  
+    
 });
 
-Route::middleware('auth:sanctum')->prefix('notification')->as('notification.')->group(function () {
-    Route::get('/view-notificationsettings', [NotificationController::class, 'viewSettings'])->name('settings_show');
-    Route::put('/update-notificationsettings', [NotificationController::class, 'updateSettings'])->name('settings_update');
-    // Route::any('/avatar', [NotificationController::class, 'updateAvatar'])->name('avatar_update');
+//Route::middleware('auth:sanctum')->prefix('notification')->as('notification.')->group(function () {
+    // Route::get('/view-notificationsettings/show', [NotificationController::class, 'viewSettings'])->name('settings_show');
+    // Route::put('/update-notificationsettings/update', [NotificationController::class, 'updateSettings'])->name('settings_update');  
+    // // Route::any('/avatar', [NotificationController::class, 'updateAvatar'])->name('avatar_update');
     // Route::get('/view-profile', [NotificationController::class, 'viewProfile'])->name('profile_show');
     // Route::put('/update-profile', [NotificationController::class, 'updateProfile'])->name('profile_update');
 
-
-});
 
 Route::group(['prefix' => 'mbi'], function () {
     Route::post('contact-us/save', [HomepageController::class, 'saveContact'])->name('saveContact');
@@ -77,28 +77,20 @@ Route::group(['prefix' => 'mbi'], function () {
     Route::get('waiting-list/fetchall', [HomepageController::class, 'fetchAllWaitingList'])->name('fetchAllWaitingList');
 });
     Route::middleware('auth:sanctum')->prefix('network')->as('network.')->group(function () {
-        // DISCOVER
-        Route::prefix('discover')->controller(DiscoverController::class)->as('discover.')->group(function () {
-            Route::get('view-all', 'index')->name('view-all');
-            Route::get('view-profile/{user_id}', 'show')->name('view-profile');
-            Route::post('connect/{user_id}', 'add')->name('connect');
-        });
-        // RECEIVED INVITATIONS
-        Route::prefix('received')->controller(ReceivedController::class)->as('received.')->group(function () {
-            Route::get('/', 'index')->name('index');
-            Route::put('accept/{connection_id}', 'accept')->name('accept');
-            Route::put('reject/{connection_id}', 'reject')->name('reject');
-        });
-        // SENT INVITATIONS
-        Route::prefix('sent')->controller(SentController::class)->as('sent.')->group(function () {
-            Route::get('/', 'index')->name('fetch');
-            Route::delete('cancel/{connection_id}', 'cancel')->name('cancel');
-        });
-        // MY CONNECTIONS
-        Route::prefix('connections')->controller(ConnectionsController::class)->as('connections.')->group(function () {
-            Route::get('/', 'fetch')->name('fetch-connections');
-            Route::get('message/{user_id}', 'create')->name('create-message');
-        });
+            Route::get('discover/view', [DiscoverController::class, 'view'])->name('view-all');
+            Route::get('discover/show-profile/{user_id}', [DiscoverController::class, 'show'])->name('view-profile');
+            Route::post('discover/connect/{user_id}', [DiscoverController::class, 'add'])->name('connect');
+
+            Route::get('received/view', [ReceivedController::class, 'view'])->name('view-recevied');
+            Route::put('received/accept/{connection_id}', [ReceivedController::class, 'accept'])->name('accept');
+            Route::put('received/reject/{connection_id}', [ReceivedController::class, 'reject'])->name('reject');
+
+            Route::get('sent/view', [SentController::class, 'view'])->name('view-sent');
+            Route::delete('sent/cancel/{connection_id}', [SentController::class, 'cancel'])->name('cancel');
+
+            Route::get('connections/view', [ConnectionsController::class, 'view'])->name('fetch-connections');
+            Route::get('connections/message/{user_id}', [ConnectionsController::class, 'createMessage'])->name('create-message');
+
          
         Route::get('/', [NetworkController::class, 'index'])->name('index');
 });

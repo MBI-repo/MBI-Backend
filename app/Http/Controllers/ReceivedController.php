@@ -9,7 +9,7 @@ use Illuminate\Support\Facades\DB;
 
 class ReceivedController extends Controller
 {
-    public function index(Request $request)
+    public function view(Request $request)
     {
         try {
             $authUser = Auth::user();
