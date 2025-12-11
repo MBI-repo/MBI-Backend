@@ -87,11 +87,17 @@ class EventsController extends Controller
     }
 
 
-    public function fetchAll()
+    public function fetchAll(Request $request)
     {
         try {
-            $events = Event::latest()->get();
+            if ($request->has('start_date')) {
+                $events = Event::where('start_date', '=', $request->input('start_date'));
+            } else {
+
+                $events = Event::latest()->get();
+            }
             $base_url = "https://admin.mybridgeinternational.org/mbi-admin-files/public/";
+
 
             // Loop through each event and modify image_url
             $events->transform(function ($event) use ($base_url) {
@@ -101,6 +107,7 @@ class EventsController extends Controller
                 }
                 return $event;
             });
+
 
             return response()->json([
                 'success' => true,

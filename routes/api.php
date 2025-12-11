@@ -110,7 +110,7 @@ Route::middleware('auth:sanctum')->group(function () {
 Route::prefix('v1')->group(function () {
     // Route::get('/events', [EventsController::class, 'index']);
     Route::get('/events/{id}', [EventsController::class, 'show']);
-    Route::get('/fetch-all-events', [EventsController::class, 'fetchAll']);
+    Route::any('/fetch-all-events', [EventsController::class, 'fetchAll']);
 
     // Public product browsing
     Route::get('/products', [ProductsController::class, 'index']);
