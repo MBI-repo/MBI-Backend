@@ -91,7 +91,7 @@ class EventsController extends Controller
     {
         try {
             if ($request->has('start_date')) {
-                $events = Event::where('start_date', '=', $request->input('start_date'));
+                $events = Event::where('start_date', '=', $request->input('start_date'))->get();
             } else {
 
                 $events = Event::latest()->get();
