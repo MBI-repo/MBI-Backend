@@ -322,7 +322,7 @@ class ProductsController extends Controller
             return response()->json(['status' => false, 'message' => 'Unauthorized'], 401);
         }
 
-        $product = Product::find($productId);
+        $product = Product::where('uuid',$productId)->first();
         if (!$product) {
             return response()->json(['status' => false, 'message' => 'Product not found'], 404);
         }
@@ -339,7 +339,7 @@ class ProductsController extends Controller
             'email' => ['required', 'email', 'max:255'],
             'phone' => ['required', 'string', 'max:255'],
             'contact_person' => ['required', 'string', 'max:255'],
-            'equipment_name' => ['required', 'string', 'max:255'],
+            // 'equipment_name' => ['required', 'string', 'max:255'],
             'urgency' => ['required', 'string', 'max:255'],
             'preferred_manufacturer' => ['nullable', 'string', 'max:255'],
             'quantity' => ['required', 'integer', 'min:1'],
@@ -373,7 +373,7 @@ class ProductsController extends Controller
         $bid->email = $data['email'];
         $bid->phone = $data['phone'];
         $bid->contact_person = $data['contact_person'];
-        $bid->equipment_name = $data['equipment_name'];
+        $bid->equipment_name = $product->name;
         $bid->urgency = $data['urgency'];
         $bid->preferred_manufacturer = $data['preferred_manufacturer'] ?? null;
         $bid->quantity = $data['quantity'];
