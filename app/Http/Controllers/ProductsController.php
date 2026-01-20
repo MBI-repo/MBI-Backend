@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Product;
+use App\Models\ProductBidding;
 use App\Models\ProductImage;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -309,5 +310,137 @@ class ProductsController extends Controller
         $image->delete();
 
         return response()->json(['status' => true, 'message' => 'Image deleted']);
+    }
+
+    /**
+     * Submit a bid for a donation product.
+     */
+    public function submitBid(Request $request, $productId)
+    {
+        $user = Auth::user();
+        if (!$user) {
+            return response()->json(['status' => false, 'message' => 'Unauthorized'], 401);
+        }
+
+        $product = Product::find($productId);
+        if (!$product) {
+            return response()->json(['status' => false, 'message' => 'Product not found'], 404);
+        }
+
+        if (strtolower($product->product_type ?? '') !== 'donation') {
+            return response()->json(['status' => false, 'message' => 'Not a donation product'], 404);
+        }
+
+        $validator = Validator::make($request->all(), [
+            'applicant_type' => ['required', 'string', 'max:255'],
+            'organization_name' => ['nullable', 'string', 'max:255'],
+            'organization_website' => ['nullable', 'string', 'max:255'],
+            'facility_address' => ['required', 'string', 'max:255'],
+            'email' => ['required', 'email', 'max:255'],
+            'phone' => ['required', 'string', 'max:255'],
+            'contact_person' => ['required', 'string', 'max:255'],
+            'equipment_name' => ['required', 'string', 'max:255'],
+            'urgency' => ['required', 'string', 'max:255'],
+            'preferred_manufacturer' => ['nullable', 'string', 'max:255'],
+            'quantity' => ['required', 'integer', 'min:1'],
+            'can_contribute' => ['required', 'string', 'max:255'],
+            'budget' => ['nullable', 'string', 'max:255'],
+            'statement_of_need' => ['required', 'string'],
+            'intended_use' => ['required', 'string'],
+            'agreed' => ['accepted'],
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Validation errors',
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        $data = $validator->validated();
+
+        $code = 'REQ-' . date('Y') . '-' . strtoupper(bin2hex(random_bytes(3)));
+
+        $bid = new ProductBidding();
+        $bid->product_id = $product->id;
+        $bid->user_id = $user->id;
+        $bid->request_code = $code;
+        $bid->applicant_type = $data['applicant_type'];
+        $bid->organization_name = $data['organization_name'] ?? null;
+        $bid->organization_website = $data['organization_website'] ?? null;
+        $bid->facility_address = $data['facility_address'];
+        $bid->email = $data['email'];
+        $bid->phone = $data['phone'];
+        $bid->contact_person = $data['contact_person'];
+        $bid->equipment_name = $data['equipment_name'];
+        $bid->urgency = $data['urgency'];
+        $bid->preferred_manufacturer = $data['preferred_manufacturer'] ?? null;
+        $bid->quantity = $data['quantity'];
+        $bid->can_contribute = $data['can_contribute'];
+        $bid->budget = $data['budget'] ?? null;
+        $bid->statement_of_need = $data['statement_of_need'];
+        $bid->intended_use = $data['intended_use'];
+        $bid->agreed = true;
+        $bid->status = 'pending';
+        $bid->save();
+
+        return response()->json([
+            'status' => true,
+            'message' => 'Bid submitted successfully',
+            'data' => [
+                'bid_request_code' => $code,
+                'bid' => $bid
+            ]
+        ], 201);
+    }
+
+    /**
+     * Get user's biddings.
+     */
+    public function myBiddings()
+    {
+        $user = Auth::user();
+        if (!$user) {
+            return response()->json(['status' => false, 'message' => 'Unauthorized'], 401);
+        }
+
+        $biddings = ProductBidding::with('product')
+            ->where('user_id', $user->id)
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        return response()->json([
+            'status' => true,
+            'data' => $biddings
+        ]);
+    }
+
+    /**
+     * Show a specific bid.
+     */
+    public function showBid($bidId)
+    {
+        $user = Auth::user();
+        if (!$user) {
+            return response()->json(['status' => false, 'message' => 'Unauthorized'], 401);
+        }
+
+        $bid = ProductBidding::find($bidId);
+
+        if (!$bid) {
+             return response()->json(['status' => false, 'message' => 'Bid not found'], 404);
+        }
+
+        if ((int) $bid->user_id !== (int) $user->id) {
+            return response()->json(['status' => false, 'message' => 'Forbidden'], 403);
+        }
+
+        $bid->load('product');
+
+        return response()->json([
+            'status' => true,
+            'data' => $bid
+        ]);
     }
 }

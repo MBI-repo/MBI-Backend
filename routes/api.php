@@ -116,6 +116,8 @@ Route::prefix('v1')->group(function () {
     Route::get('/products', [ProductsController::class, 'index']);
     Route::get('/products/donation', [ProductsController::class, 'donationProduct']);
     Route::get('/products/{id}', [ProductsController::class, 'show']);
+
+    
 });
 
 
@@ -165,4 +167,9 @@ Route::middleware('auth:sanctum')->prefix('v1')->group(function () {
     Route::put('/products/{id}', [ProductsController::class, 'update']);
     Route::delete('/products/{id}', [ProductsController::class, 'destroy']);
     Route::delete('/products/images/{imageId}', [ProductsController::class, 'destroyImage']);
+
+    // Bidding
+    Route::post('/products/bid/{id}', [ProductsController::class, 'submitBid']);
+    Route::get('/my-biddings', [ProductsController::class, 'myBiddings']);
+    Route::get('/biddings/{bidId}', [ProductsController::class, 'showBid']);
 });
