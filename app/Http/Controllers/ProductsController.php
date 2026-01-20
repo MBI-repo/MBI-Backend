@@ -19,6 +19,7 @@ class ProductsController extends Controller
         $products = Product::with('images')->orderByDesc('id')->where('product_type','product')->get();
         $baseUrl = 'https://api.mybridgeinternational.org/mybridge-backend-files/storage/app/public/';
         $productUrl = 'https://portal.mybridgeinternational.org/mbi-portal-files/public/';
+        return 'pelumi';
         $data = $products->map(function (Product $p) use ($baseUrl,$productUrl) {   
             return [
                 'id'          => $p->id,
