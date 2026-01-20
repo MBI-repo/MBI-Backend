@@ -347,7 +347,7 @@ class ProductsController extends Controller
             'budget' => ['nullable', 'string', 'max:255'],
             'statement_of_need' => ['required', 'string'],
             'intended_use' => ['required', 'string'],
-            'agreed' => ['accepted'],
+            'agreed' => ['required','boolean'],
         ]);
 
         if ($validator->fails()) {
