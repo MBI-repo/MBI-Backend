@@ -19,7 +19,7 @@ class ProductsController extends Controller
         $products = Product::with('images')->orderByDesc('id')->where('product_type','product')->get();
         $baseUrl = 'https://api.mybridgeinternational.org/mybridge-backend-files/storage/app/public/';
         $productUrl = 'https://portal.mybridgeinternational.org/mbi-portal-files/public/';
-        return 'pelumi';
+     
         $data = $products->map(function (Product $p) use ($baseUrl,$productUrl) {   
             return [
                 'id'          => $p->id,
@@ -104,7 +104,7 @@ class ProductsController extends Controller
             'created_by'  => $product->created_by,
             'images'      => $product->images->map(fn ($img) => [
                 'id'        => $img->id,
-                'image_url' => $product->product_type === 'donation' ? $baseUrl . $img->image_url : $productUrl . $img->image_url,
+                'image_url' => Storage::disk('public')->exists($img->image_url) ? $baseUrl . $img->image_url : $productUrl . $img->image_url,
                 'sort_order'=> $img->sort_order,
             ]),
         ];
