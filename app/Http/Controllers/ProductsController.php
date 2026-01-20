@@ -46,7 +46,8 @@ class ProductsController extends Controller
     {
         $products = Product::with('images')->orderByDesc('id')->where('product_type','donation')->get();
         $baseUrl = 'https://api.mybridgeinternational.org/mybridge-backend-files/storage/app/public/';
-        $data = $products->map(function (Product $p) use ($baseUrl) {
+        $product_url = 'https://portal.mybridgeinternational.org/mbi-portal-files/public/';
+        $data = $products->map(function (Product $p) use ($baseUrl,$product_url) {
             return [
                 'id'          => $p->id,
                 'uuid'        => $p->uuid,
@@ -59,7 +60,7 @@ class ProductsController extends Controller
                 'created_by'  => $p->created_by,
                 'images'      => $p->images->map(fn ($img) => [
                     'id'        => $img->id,
-                    'image_url' => $baseUrl . $img->image_url,
+                    'image_url' => $p->product_type === 'donation' ? $baseUrl . $img->image_url : $product_url . $img->image_url,
                     'sort_order'=> $img->sort_order,
                 ]),
             ];
@@ -88,6 +89,7 @@ class ProductsController extends Controller
         }
 
         $baseUrl = 'https://api.mybridgeinternational.org/mybridge-backend-files/storage/app/public/';
+        $productUrl = 'https://portal.mybridgeinternational.org/mbi-portal-files/public/';
         $data = [
             'id'          => $product->id,
             'uuid'        => $product->uuid,
@@ -100,7 +102,7 @@ class ProductsController extends Controller
             'created_by'  => $product->created_by,
             'images'      => $product->images->map(fn ($img) => [
                 'id'        => $img->id,
-                'image_url' => $baseUrl . $img->image_url,
+                'image_url' => $product->product_type === 'donation' ? $baseUrl . $img->image_url : $productUrl . $img->image_url,
                 'sort_order'=> $img->sort_order,
             ]),
         ];
