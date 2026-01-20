@@ -92,6 +92,7 @@ class ProductsController extends Controller
 
         $baseUrl = 'https://api.mybridgeinternational.org/mybridge-backend-files/storage/app/public/';
         $productUrl = 'https://portal.mybridgeinternational.org/mbi-portal-files/public/';
+        $donatedUrl = 'https://admin.mybridgeinternational.org/mbi-admin-files/public/';
         $data = [
             'id'          => $product->id,
             'uuid'        => $product->uuid,
@@ -104,7 +105,7 @@ class ProductsController extends Controller
             'created_by'  => $product->created_by,
             'images'      => $product->images->map(fn ($img) => [
                 'id'        => $img->id,
-                'image_url' => Storage::disk('public')->exists($img->image_url) ? $baseUrl . $img->image_url : $productUrl . $img->image_url,
+                'image_url' => $product->product_type === 'donation' ? $donatedUrl . $img->image_url : Storage::disk('public')->exists($img->image_url) ? $baseUrl . $img->image_url : $productUrl . $img->image_url,
                 'sort_order'=> $img->sort_order,
             ]),
         ];
