@@ -7,6 +7,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Str;
 use App\Models\User;
 use App\Models\ProfessionalProfile;
 
@@ -15,29 +16,60 @@ use App\Models\ProfessionalProfile;
 
 class ProfileController extends Controller
 {
-    public function showAccount()
+    public function showAccount(Request $request)
     {
         try {
-            $user = Auth::user();
-            $base_url = "https://api.mybridgeinternational.org/mybridge-backend-files/storage/app/public/";
+            $user = $request->user();
+            if (! $user) {
+                return response()->json([
+                    'status'  => false,
+                    'message' => 'Authenticated user not found',
+                ], 401);
+            }
+
+            // Resolve image URL (returns uploaded image full URL OR default image full URL)
+            $imageUrl = $this->resolveUserImageUrl($user->image);
+
             return response()->json([
                 'status'  => true,
                 'message' => 'Account information fetched successfully.',
                 'data'    => [
-                    'uuid'                => $user->uuid,
-                    'full_name'           => $user->full_name,
-                    'email'               => $user->email,
-                    'image'               =>  $base_url . $user->image,
+                    'uuid'      => $user->uuid,
+                    'full_name' => $user->full_name,
+                    'email'     => $user->email,
+                    'image'     => $imageUrl,
                 ],
             ], 200);
-
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             return response()->json([
                 'status'  => false,
                 'message' => 'Error: ' . $e->getMessage(),
             ], 500);
         }
     }
+    // public function showAccount()
+    // {
+    //     try {
+    //         $user = Auth::user();
+    //         $base_url = "https://api.mybridgeinternational.org/mybridge-backend-files/storage/app/public/";
+    //         return response()->json([
+    //             'status'  => true,
+    //             'message' => 'Account information fetched successfully.',
+    //             'data'    => [
+    //                 'uuid'                => $user->uuid,
+    //                 'full_name'           => $user->full_name,
+    //                 'email'               => $user->email,
+    //                 'image'               =>  $base_url . $user->image,
+    //             ],
+    //         ], 200);
+
+    //     } catch (\Exception $e) {
+    //         return response()->json([
+    //             'status'  => false,
+    //             'message' => 'Error: ' . $e->getMessage(),
+    //         ], 500);
+    //     }
+    // }
 
     public function updateAccount(Request $request)
     {
@@ -96,60 +128,148 @@ class ProfileController extends Controller
         }
     }
 
+
+
     public function updateAvatar(Request $request)
     {
         try {
-            $user = User::find(Auth::id());
-            if (!$user) {
+            $user = $request->user();
+            if (! $user) {
                 return response()->json([
-                    'success' => false,
+                    'status' => false,
                     'message' => 'Authenticated user not found',
                 ], 401);
             }
+
             $validator = Validator::make($request->all(), [
                 'avatar' => ['required', 'image', 'mimes:jpeg,jpg,png,gif,webp', 'max:2048'],
             ]);
+
             if ($validator->fails()) {
                 return response()->json([
-                    'success' => false,
+                    'status' => false,
                     'message' => 'Validation errors',
                     'errors'  => $validator->errors(),
                 ], 422);
             }
 
-            $file   = $request->file('avatar');
+            $file = $request->file('avatar');
 
-            $path = $file->store('profile_photos', 'public');
-
-            if ($user->image && !filter_var($user->image, FILTER_VALIDATE_URL)) {
-                $oldPath = $user->image;
-                if (Storage::disk('public')->exists($oldPath)) {
-                    Storage::disk('public')->delete($oldPath);
+            // Delete previous file if it follows the storage pattern: /storage/profile_photos/...
+            if (! empty($user->image) && str_starts_with($user->image, '/storage/profile_photos/')) {
+                $oldRelative = ltrim(str_replace('/storage/', '', $user->image), '/'); // profile_photos/xxx.jpg
+                if (! empty($oldRelative) && Storage::disk('public')->exists($oldRelative)) {
+                    Storage::disk('public')->delete($oldRelative);
                 }
             }
 
-            $user->image = $path;
+            // Store new file under public/profile_photos with a UUID filename
+            $filename = (string) Str::uuid() . '.' . $file->getClientOriginalExtension();
+            $relativePath = 'profile_photos/' . $filename;
+            Storage::disk('public')->putFileAs('profile_photos', $file, $filename);
+
+            // Persist DB path as '/storage/profile_photos/filename.ext'
+            $user->image = '/storage/' . $relativePath;
             $user->save();
-            $base_url = "https://api.mybridgeinternational.org/mybridge-backend-files/storage/app/public/";
+
+            // Build full public URL for frontend (base must match live server asset location)
+            $Base_Url = rtrim('https://api.mybridgeinternational.org/mybridge-backend-files/storage/app/public/', '/');
+            $fullUrl = $Base_Url . '/' . $relativePath;
 
             return response()->json([
                 'status'  => true,
                 'message' => 'Profile picture updated successfully.',
                 'data'    => [
-                    'uuid'                 => $user->uuid,
-                    'full_name'          => $user->full_name,
-                    'email'              => $user->email,
-                    'image' =>  $base_url . $user->image,
+                    'uuid'      => $user->uuid,
+                    'full_name' => $user->full_name,
+                    'email'     => $user->email,
+                    'image'     => $fullUrl,
                 ],
             ], 200);
-
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             return response()->json([
                 'status'  => false,
                 'message' => 'Error: ' . $e->getMessage(),
             ], 500);
         }
     }
+
+    /**
+     * Use this helper when returning user profiles elsewhere.
+     * It returns the absolute URL for the user's image, or the default image URL if none exists.
+     */
+    private function resolveUserImageUrl(?string $storedPath): string
+    {
+        // Storage-served images
+        $Base_Url = rtrim('https://api.mybridgeinternational.org/mybridge-backend-files/storage/app/public/', '/');
+
+        if (! empty($storedPath) && str_starts_with($storedPath, '/storage/profile_photos/')) {
+            // storedPath = "/storage/profile_photos/xxx.jpg" -> relative = profile_photos/xxx.jpg
+            $relative = ltrim(str_replace('/storage/', '', $storedPath), '/');
+            return $Base_Url . '/' . $relative;
+        }
+
+        // Default image located in public/defaults/default-avatar.png
+        $publicBase = rtrim('https://api.mybridgeinternational.org/mybridge-backend-files/public', '/');
+        return $publicBase . '/defaults/default-avatar.png';
+    }
+
+
+
+    //public function updateAvatar(Request $request)
+    // {
+    //     try {
+    //         $user = User::find(Auth::id());
+    //         if (!$user) {
+    //             return response()->json([
+    //                 'success' => false,
+    //                 'message' => 'Authenticated user not found',
+    //             ], 401);
+    //         }
+    //         $validator = Validator::make($request->all(), [
+    //             'avatar' => ['required', 'image', 'mimes:jpeg,jpg,png,gif,webp', 'max:2048'],
+    //         ]);
+    //         if ($validator->fails()) {
+    //             return response()->json([
+    //                 'success' => false,
+    //                 'message' => 'Validation errors',
+    //                 'errors'  => $validator->errors(),
+    //             ], 422);
+    //         }
+
+    //         $file   = $request->file('avatar');
+
+    //         $path = $file->store('profile_photos', 'public');
+
+    //         if ($user->image && !filter_var($user->image, FILTER_VALIDATE_URL)) {
+    //             $oldPath = $user->image;
+    //             if (Storage::disk('public')->exists($oldPath)) {
+    //                 Storage::disk('public')->delete($oldPath);
+    //             }
+    //         }
+
+    //         $user->image = $path;
+    //         $user->save();
+    //         $base_url = "https://api.mybridgeinternational.org/mybridge-backend-files/storage/app/public/";
+
+    //         return response()->json([
+    //             'status'  => true,
+    //             'message' => 'Profile picture updated successfully.',
+    //             'data'    => [
+    //                 'uuid'                 => $user->uuid,
+    //                 'full_name'          => $user->full_name,
+    //                 'email'              => $user->email,
+    //                 'image' =>  $base_url . $user->image,
+    //             ],
+    //         ], 200);
+
+    //     } catch (\Exception $e) {
+    //         return response()->json([
+    //             'status'  => false,
+    //             'message' => 'Error: ' . $e->getMessage(),
+    //         ], 500);
+    //     }
+    //}
 
     public function viewProfile()
     {

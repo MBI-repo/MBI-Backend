@@ -25,11 +25,18 @@ class UserFactory extends Factory
     {
         return [
             'full_name' => fake()->name(),
+            'uuid'=>Str::random(10),
             'email' => fake()->unique()->safeEmail(),
             'phone' => fake()->unique()->phoneNumber(),
             'email_verified_at' => now(),
             'password' => static::$password ??= Hash::make('password'),
             'remember_token' => Str::random(10),
+            'category' => 'Doctor',
+            'specialisation' => 'General Practice',
+            'institution' => 'Test Hospital',
+            'license_number' => 'TEST-' . rand(1000, 9999),
+            'approval_status' => 'approved',
+            'status' => 'active',
         ];
     }
 

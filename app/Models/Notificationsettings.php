@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 
-class Notifications extends Model
+class Notificationsettings extends Model
 {
     use HasFactory;
 

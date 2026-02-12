@@ -12,9 +12,11 @@ use App\Http\Controllers\HomepageController;
 use App\Http\Controllers\MessagesController;
 use App\Http\Controllers\NetworkController;
 use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\NotificationSettingsController;
 use App\Http\Controllers\ReceivedController;
 use App\Http\Controllers\SentController;
 use App\Http\Controllers\WaitingListController;
+use App\Http\Controllers\ProfileController;
 use App\Models\WaitingList;
 use Illuminate\Http\Request;
 use Illuminate\Broadcasting\BroadcastController;
@@ -28,19 +30,15 @@ use Illuminate\Support\Facades\Route;
 // Public routes
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
-
 Route::post('/forgot-password', [AuthController::class, 'forgotPassword']);
 Route::post('/reset-password', [AuthController::class, 'resetPassword'])->name('resetpasswordfield');
 Route::post('/logout', [AuthController::class, 'destroy'])->name('logout');
-
 
 
 Route::group(['prefix' => 'user'], function () {
     Route::get('/', [AuthController::class, 'user'])->name('fetchUser');
     Route::post('/', [AuthController::class, 'update'])->middleware('auth:sanctum')->name('updateUser');
 });
-
-use App\Http\Controllers\ProfileController;
 
 Route::middleware('auth:sanctum')->prefix('settings')->as('settings.')->group(function () {
     Route::get('/account-info/show', [ProfileController::class, 'showAccount'])->name('account_show');
@@ -50,9 +48,16 @@ Route::middleware('auth:sanctum')->prefix('settings')->as('settings.')->group(fu
     Route::get('/profile/show', [ProfileController::class, 'viewProfile'])->name('profile_show');
     Route::put('/profile/update', [ProfileController::class, 'updateProfile'])->name('profile_update');
 
-    Route::get('/notification/show', [NotificationController::class, 'viewSettings'])->name('settings_show');
-    Route::put('/notification/update', [NotificationController::class, 'updateSettings'])->name('settings_update');  
+    Route::get('/notification/show', [NotificationSettingsController::class, 'viewSettings'])->name('settings_show');
+    Route::put('/notification/update', [NotificationSettingsController::class, 'updateSettings'])->name('settings_update');  
     
+});
+
+Route::middleware('auth:sanctum')->prefix('notification')->as('notification.')->group(function () {
+Route::get('/show', [NotificationController::class, 'index'])->name('notification_show');
+Route::patch('/read/{id}', [NotificationController::class, 'markAsRead'])->name('notification_read');
+Route::patch('/read-all', [NotificationController::class, 'markAllAsRead'])->name('notification_readAll');
+Route::delete('/delete/{id}', [NotificationController::class, 'destroy'])->name('notification_delete');
 });
 
 //Route::middleware('auth:sanctum')->prefix('notification')->as('notification.')->group(function () {

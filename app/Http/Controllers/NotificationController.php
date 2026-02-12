@@ -2,128 +2,131 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Notifications;
-use App\Models\User;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Validator;
-
+use App\Http\Controllers\Controller;
+use App\Models\Notification;
+use Carbon\Carbon;
 
 class NotificationController extends Controller
 {
-    public function viewSettings()
+    public function index(Request $request)
     {
         try {
-            $user = Auth::user();
-
-            $setting = Notifications::firstOrCreate(
-                ['user_uuid' => $user->uuid],
-                [
-                    'notify_network' => true,
-                    'notify_messages' => true,
-                    'notify_events' => true,
-                    'notify_system' => true,
-                    'frequency' => 'instant'
-                ]
-            );
-
-            return response()->json([
-                'success' => true,
-                'message' => 'Notification settings retrieved.',
-                'data' => $setting
-            ], 200);
-
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Error: '.$e->getMessage(),
-            ], 500);
-        }
-    }
-    public function updateSettings(Request $request)
-    {
-        try {
-            $user = Auth::user();
-
+            $user = $request->user();
             if (! $user) {
                 return response()->json([
-                    'success' => false,
-                    'message' => 'Authenticated user not found',
+                    'status' => false,
+                    'message' => 'Unauthenticated',
                 ], 401);
             }
-
-            // Validate input
-            $validator = Validator::make($request->all(), [
-                'network' => ['nullable', 'boolean'],
-                'messages' => ['nullable', 'boolean'],
-                'events' => ['nullable', 'boolean'],
-                'system' => ['nullable', 'boolean'],
-
-                'frequency' => ['required', 'array'],
-                'frequency.instant' => ['required', 'boolean'],
-                'frequency.daily' => ['required', 'boolean'],
-                'frequency.weekly' => ['required', 'boolean'],
-            ]);
-
-            if ($validator->fails()) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Validation errors',
-                    'errors' => $validator->errors(),
-                ], 422);
-            }
-
-            // Frequency must have exactly one true
-            $freq = $request->frequency;
-            $freqOptions = [
-                'instant' => $freq['instant'],
-                'daily' => $freq['daily'],
-                'weekly' => $freq['weekly'],
-            ];
-
-            if (collect($freqOptions)->filter()->count() !== 1) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Exactly one frequency option must be selected.',
-                ], 422);
-            }
-
-            $frequencyValue = array_search(true, $freqOptions);
-
-            // Get or create settings record
-            $setting = Notifications::firstOrCreate(
-                ['user_uuid' => $user->uuid]
-            );
-
-            if ($request->has('network')) {
-                $setting->notify_network = $request->network;
-            }
-            if ($request->has('messages')) {
-                $setting->notify_messages = $request->messages;
-            }
-            if ($request->has('events')) {
-                $setting->notify_events = $request->events;
-            }
-            if ($request->has('system')) {
-                $setting->notify_system = $request->system;
-            }
-
-            $setting->frequency = $frequencyValue;
-
-            $setting->save();
-
+            $notifications = Notification::with('sender')->where('receiver_id', $user->uuid)->latest()->limit(50)->get();
+            $data = $notifications->map(function ($item) {
+                return [
+                    'id'     => $item->id,
+                    'name'   => $item->sender? $item->sender->full_name: 'System',
+                    'message' => $item->message,
+                    'time'   => $this->formatTime($item->created_at),
+                    'unread' => ! $item->is_read,
+                    'avatar' => $this->resolveUserImageUrl(
+                        optional($item->sender)->image
+                    ),
+                    'type'   => $item->type,
+                ];
+            });
             return response()->json([
-                'success' => true,
-                'message' => 'Notification settings updated successfully.',
-                'data'    => $setting,
+                'status'  => true,
+                'message' => 'Notifications fetched successfully',
+                'data'    => $data,
             ], 200);
-
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             return response()->json([
-                'success' => false,
-                'message' => 'Error: '.$e->getMessage(),
+                'status'  => false,
+                'message' => 'Error: ' . $e->getMessage(),
             ], 500);
         }
     }
 
+    public function markAsRead(Request $request, $id)
+    {
+        try {
+            $user = $request->user();
+            $notification = Notification::where('id', $id)->where('receiver_id', $user->uuid)->firstOrFail();
+            // echo dd($notification);
+            $notification->update(['is_read' => true]);
+            return response()->json([
+                'status'  => true,
+                'message' => 'Notification marked as read',
+            ]);
+         } 
+         catch (\Throwable $e) {
+            return response()->json([
+                'status'  => false,
+                'message' => 'Error: ' . $e->getMessage(),
+            ], 500);
+         }
+    }
+
+    public function markAllAsRead(Request $request)
+    {
+        try {
+            $user = $request->user();
+            Notification::where('receiver_id', $user->uuid)->where('is_read', false)->update(['is_read' => true,]);
+            
+            return response()->json([
+                'status' => true,
+                'message' => 'All notifications marked as read',
+            ], 200);
+        } catch (\Throwable $e) {
+            return response()->json([
+                'status' => false,
+                'message' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    public function destroy(Request $request, $id)
+    {
+        try {
+            $user = $request->user();
+            $notification = Notification::where('id', $id)->where('receiver_id', $user->uuid)->first();
+            if (! $notification) {
+                return response()->json(['success' => false, 'message' => 'Notification not found.'], 404);
+            }
+            $notification->delete();
+            return response()->json(['success' => true, 'message' => 'Notification deleted.'], 200);
+
+        } catch (\Throwable $e) {
+            return response()->json(['success' => false, 'message' => 'Error: '.$e->getMessage()], 500);
+        }
+    }
+
+    private function formatTime($date)
+    {
+        return Carbon::parse($date)->diffForHumans(['short' => true,]);
+    }
+
+    private function resolveUserImageUrl(?string $storedPath): string
+    {
+        $baseUrl = rtrim(
+            'https://api.mybridgeinternational.org/mybridge-backend-files/storage/app/public/',
+            '/'
+        );
+        if (! empty($storedPath)
+            && str_starts_with($storedPath, '/storage/profile_photos/')
+        ) {
+            $relative = ltrim(
+                str_replace('/storage/', '', $storedPath),
+                '/'
+            );
+            return $baseUrl . '/' . $relative;
+        }
+        
+
+        // Default avatar
+        $publicBase = rtrim(
+            'https://api.mybridgeinternational.org/mybridge-backend-files/public',
+            '/'
+        );
+        return $publicBase . '/defaults/default-avatar.png';
+    }
 }
