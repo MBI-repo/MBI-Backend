@@ -3,7 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Models\Event;
+use App\Models\EventSubscription;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 use Carbon\Carbon;
@@ -72,6 +74,10 @@ class EventsController extends Controller
                 $event->image_url = $base_url . ltrim($img, '/');
             }
 
+            // Check if authenticated user is subscribed
+            $user = Auth::guard('sanctum')->user();
+            $event->is_subscribed = $user ? EventSubscription::where('event_id', $event->id)->where('user_id', $user->id)->exists() : false;
+
             return response()->json([
                 'success' => true,
                 'message' => 'Event fetched successfully',
@@ -98,13 +104,16 @@ class EventsController extends Controller
             }
             $base_url = "https://admin.mybridgeinternational.org/mbi-admin-files/public/";
 
+            $user = Auth::guard('sanctum')->user();
+            $subscribedEventIds = $user ? EventSubscription::where('user_id', $user->id)->pluck('event_id')->toArray() : [];
 
             // Loop through each event and modify image_url
-            $events->transform(function ($event) use ($base_url) {
+            $events->transform(function ($event) use ($base_url, $subscribedEventIds) {
                 $img = $event->image_url;
                 if (!empty($img) && !str_starts_with($img, 'http://') && !str_starts_with($img, 'https://')) {
                     $event->image_url = $base_url . ltrim($img, '/');
                 }
+                $event->is_subscribed = in_array($event->id, $subscribedEventIds);
                 return $event;
             });
 
