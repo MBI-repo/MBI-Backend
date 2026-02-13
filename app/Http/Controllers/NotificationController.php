@@ -90,13 +90,13 @@ class NotificationController extends Controller
             $user = $request->user();
             $notification = Notification::where('id', $id)->where('receiver_id', $user->uuid)->first();
             if (! $notification) {
-                return response()->json(['success' => false, 'message' => 'Notification not found.'], 404);
+                return response()->json(['status' => false, 'message' => 'Notification not found.'], 404);
             }
             $notification->delete();
-            return response()->json(['success' => true, 'message' => 'Notification deleted.'], 200);
+            return response()->json(['status' => true, 'message' => 'Notification deleted.'], 200);
 
         } catch (\Throwable $e) {
-            return response()->json(['success' => false, 'message' => 'Error: '.$e->getMessage()], 500);
+            return response()->json(['status' => false, 'message' => 'Error: '.$e->getMessage()], 500);
         }
     }
 
