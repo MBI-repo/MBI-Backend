@@ -12,18 +12,18 @@ class Notificationsettings extends Model
 
     protected $fillable = [
         'user_uuid',
-        'notify_network',
-        'notify_messages',
-        'notify_events',
-        'notify_system',
+        'network',
+        'messages',
+        'events',
+        'system',
         'frequency',
     ];
 
     protected $casts = [
-        'notify_network'  => 'boolean',
-        'notify_messages' => 'boolean',
-        'notify_events'   => 'boolean',
-        'notify_system'   => 'boolean',
+        'network'  => 'boolean',
+        'messages' => 'boolean',
+        'events'   => 'boolean',
+        'system'   => 'boolean',
     ];
 
     public function user()

@@ -11,13 +11,13 @@ return new class extends Migration
      */
     public function up(): void
     {
-       Schema::create('notifications', function (Blueprint $table) {
+       Schema::create('notification_settings', function (Blueprint $table) {
             $table->id();
             $table->uuid('user_uuid')->unique();
-            $table->boolean('notify_network')->default(true);
-            $table->boolean('notify_messages')->default(true);
-            $table->boolean('notify_events')->default(true);
-            $table->boolean('notify_system')->default(true);
+            $table->boolean('network')->default(true);
+            $table->boolean('messages')->default(true);
+            $table->boolean('events')->default(true);
+            $table->boolean('system')->default(true);
             $table->enum('frequency', ['instant', 'daily', 'weekly'])->default('instant');
             $table->timestamps();
             $table->foreign('user_uuid')->references('uuid')->on('users')->onDelete('cascade');

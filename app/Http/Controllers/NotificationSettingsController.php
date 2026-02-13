@@ -19,10 +19,10 @@ class NotificationSettingsController extends Controller
             $setting = Notificationsettings::firstOrCreate(
                 ['user_uuid' => $user->uuid],
                 [
-                    'notify_network' => true,
-                    'notify_messages' => true,
-                    'notify_events' => true,
-                    'notify_system' => true,
+                    'network' => true,
+                    'messages' => true,
+                    'events' => true,
+                    'system' => true,
                     'frequency' => 'instant'
                 ]
             );
@@ -96,16 +96,16 @@ class NotificationSettingsController extends Controller
             );
 
             if ($request->has('network')) {
-                $setting->notify_network = $request->network;
+                $setting->network = $request->network;
             }
             if ($request->has('messages')) {
-                $setting->notify_messages = $request->messages;
+                $setting->messages = $request->messages;
             }
             if ($request->has('events')) {
-                $setting->notify_events = $request->events;
+                $setting->events = $request->events;
             }
             if ($request->has('system')) {
-                $setting->notify_system = $request->system;
+                $setting->system = $request->system;
             }
 
             $setting->frequency = $frequencyValue;
