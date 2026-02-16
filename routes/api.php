@@ -27,6 +27,7 @@ use Illuminate\Support\Facades\Route;
 
 
 
+Route::group(['prefix' => 'v1'], function () {
 // Public routes
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
@@ -34,13 +35,14 @@ Route::post('/forgot-password', [AuthController::class, 'forgotPassword']);
 Route::post('/reset-password', [AuthController::class, 'resetPassword'])->name('resetpasswordfield');
 Route::post('/logout', [AuthController::class, 'destroy'])->name('logout');
 
+});
 
-Route::group(['prefix' => 'user'], function () {
+Route::group(['prefix' => 'v1/user'], function () {
     Route::get('/', [AuthController::class, 'user'])->name('fetchUser');
     Route::post('/', [AuthController::class, 'update'])->middleware('auth:sanctum')->name('updateUser');
 });
 
-Route::middleware('auth:sanctum')->prefix('settings')->as('settings.')->group(function () {
+Route::middleware('auth:sanctum')->prefix('v1/settings')->as('settings.')->group(function () {
     Route::get('/account-info/show', [ProfileController::class, 'showAccount'])->name('account_show');
     Route::put('/account-info/update', [ProfileController::class, 'updateAccount'])->name('account_update');
     Route::any('/account-info/avatar/update', [ProfileController::class, 'updateAvatar'])->name('avatar_update');
@@ -53,7 +55,7 @@ Route::middleware('auth:sanctum')->prefix('settings')->as('settings.')->group(fu
     
 });
 
-Route::middleware('auth:sanctum')->prefix('notification')->as('notification.')->group(function () {
+Route::middleware('auth:sanctum')->prefix('v1/notification')->as('notification.')->group(function () {
 Route::get('/show', [NotificationController::class, 'index'])->name('notification_show');
 Route::patch('/read/{id}', [NotificationController::class, 'markAsRead'])->name('notification_read');
 Route::patch('/read-all', [NotificationController::class, 'markAllAsRead'])->name('notification_readAll');
@@ -81,7 +83,7 @@ Route::group(['prefix' => 'mbi'], function () {
     Route::get('waiting-list/fetch/{id}', [HomepageController::class, 'fetchWaitingList'])->name('fetchWaitingList');
     Route::get('waiting-list/fetchall', [HomepageController::class, 'fetchAllWaitingList'])->name('fetchAllWaitingList');
 });
-    Route::middleware('auth:sanctum')->prefix('network')->as('network.')->group(function () {
+    Route::middleware('auth:sanctum')->prefix('v1/network')->as('network.')->group(function () {
             Route::get('discover/view', [DiscoverController::class, 'view'])->name('view-all');
             Route::get('discover/show-profile/{user_id}', [DiscoverController::class, 'show'])->name('view-profile');
             Route::post('discover/connect/{user_id}', [DiscoverController::class, 'add'])->name('connect');
@@ -106,7 +108,7 @@ Route::group(['prefix' => 'mbi'], function () {
 
 
 // Protected routes
-Route::middleware('auth:sanctum')->group(function () {
+Route::middleware('auth:sanctum')->prefix('v1')->group(function () {
     Route::get('/user', [AuthController::class, 'user']);
     Route::post('/logout', [AuthController::class, 'logout']);
 });
