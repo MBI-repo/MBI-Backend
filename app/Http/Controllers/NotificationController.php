@@ -11,6 +11,7 @@ class NotificationController extends Controller
 {
     public function index(Request $request)
     {
+        return 'pelumi';
         try {
             $user = $request->user();
             if (! $user) {

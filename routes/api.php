@@ -28,13 +28,12 @@ use Illuminate\Support\Facades\Route;
 
 
 Route::group(['prefix' => 'v1'], function () {
-// Public routes
-Route::post('/register', [AuthController::class, 'register']);
-Route::post('/login', [AuthController::class, 'login']);
-Route::post('/forgot-password', [AuthController::class, 'forgotPassword']);
-Route::post('/reset-password', [AuthController::class, 'resetPassword'])->name('resetpasswordfield');
-Route::post('/logout', [AuthController::class, 'destroy'])->name('logout');
-
+    // Public routes
+    Route::post('/register', [AuthController::class, 'register']);
+    Route::post('/login', [AuthController::class, 'login']);
+    Route::post('/forgot-password', [AuthController::class, 'forgotPassword']);
+    Route::post('/reset-password', [AuthController::class, 'resetPassword'])->name('resetpasswordfield');
+    Route::post('/logout', [AuthController::class, 'destroy'])->name('logout');
 });
 
 Route::group(['prefix' => 'v1/user'], function () {
@@ -51,23 +50,22 @@ Route::middleware('auth:sanctum')->prefix('v1/settings')->as('settings.')->group
     Route::put('/profile/update', [ProfileController::class, 'updateProfile'])->name('profile_update');
 
     Route::get('/notification/show', [NotificationSettingsController::class, 'viewSettings'])->name('settings_show');
-    Route::put('/notification/update', [NotificationSettingsController::class, 'updateSettings'])->name('settings_update');  
-    
+    Route::put('/notification/update', [NotificationSettingsController::class, 'updateSettings'])->name('settings_update');
 });
 
 Route::middleware('auth:sanctum')->prefix('v1/notification')->as('notification.')->group(function () {
-Route::get('/show', [NotificationController::class, 'index'])->name('notification_show');
-Route::patch('/read/{id}', [NotificationController::class, 'markAsRead'])->name('notification_read');
-Route::patch('/read-all', [NotificationController::class, 'markAllAsRead'])->name('notification_readAll');
-Route::delete('/delete/{id}', [NotificationController::class, 'destroy'])->name('notification_delete');
+    Route::get('/show', [NotificationController::class, 'index'])->name('notification_show');
+    Route::patch('/read/{id}', [NotificationController::class, 'markAsRead'])->name('notification_read');
+    Route::patch('/read-all', [NotificationController::class, 'markAllAsRead'])->name('notification_readAll');
+    Route::delete('/delete/{id}', [NotificationController::class, 'destroy'])->name('notification_delete');
 });
 
 //Route::middleware('auth:sanctum')->prefix('notification')->as('notification.')->group(function () {
-    // Route::get('/view-notificationsettings/show', [NotificationController::class, 'viewSettings'])->name('settings_show');
-    // Route::put('/update-notificationsettings/update', [NotificationController::class, 'updateSettings'])->name('settings_update');  
-    // // Route::any('/avatar', [NotificationController::class, 'updateAvatar'])->name('avatar_update');
-    // Route::get('/view-profile', [NotificationController::class, 'viewProfile'])->name('profile_show');
-    // Route::put('/update-profile', [NotificationController::class, 'updateProfile'])->name('profile_update');
+// Route::get('/view-notificationsettings/show', [NotificationController::class, 'viewSettings'])->name('settings_show');
+// Route::put('/update-notificationsettings/update', [NotificationController::class, 'updateSettings'])->name('settings_update');  
+// // Route::any('/avatar', [NotificationController::class, 'updateAvatar'])->name('avatar_update');
+// Route::get('/view-profile', [NotificationController::class, 'viewProfile'])->name('profile_show');
+// Route::put('/update-profile', [NotificationController::class, 'updateProfile'])->name('profile_update');
 
 
 Route::group(['prefix' => 'mbi'], function () {
@@ -83,28 +81,28 @@ Route::group(['prefix' => 'mbi'], function () {
     Route::get('waiting-list/fetch/{id}', [HomepageController::class, 'fetchWaitingList'])->name('fetchWaitingList');
     Route::get('waiting-list/fetchall', [HomepageController::class, 'fetchAllWaitingList'])->name('fetchAllWaitingList');
 });
-    Route::middleware('auth:sanctum')->prefix('v1/network')->as('network.')->group(function () {
-            Route::get('discover/view', [DiscoverController::class, 'view'])->name('view-all');
-            Route::get('discover/show-profile/{user_id}', [DiscoverController::class, 'show'])->name('view-profile');
-            Route::post('discover/connect/{user_id}', [DiscoverController::class, 'add'])->name('connect');
+Route::middleware('auth:sanctum')->prefix('v1/network')->as('network.')->group(function () {
+    Route::get('discover/view', [DiscoverController::class, 'view'])->name('view-all');
+    Route::get('discover/show-profile/{user_id}', [DiscoverController::class, 'show'])->name('view-profile');
+    Route::post('discover/connect/{user_id}', [DiscoverController::class, 'add'])->name('connect');
 
-            Route::get('received/view', [ReceivedController::class, 'view'])->name('view-recevied');
-            Route::put('received/accept/{connection_id}', [ReceivedController::class, 'accept'])->name('accept');
-            Route::put('received/reject/{connection_id}', [ReceivedController::class, 'reject'])->name('reject');
+    Route::get('received/view', [ReceivedController::class, 'view'])->name('view-recevied');
+    Route::put('received/accept/{connection_id}', [ReceivedController::class, 'accept'])->name('accept');
+    Route::put('received/reject/{connection_id}', [ReceivedController::class, 'reject'])->name('reject');
 
-            Route::get('sent/view', [SentController::class, 'view'])->name('view-sent');
-            Route::delete('sent/cancel/{connection_id}', [SentController::class, 'cancel'])->name('cancel');
+    Route::get('sent/view', [SentController::class, 'view'])->name('view-sent');
+    Route::delete('sent/cancel/{connection_id}', [SentController::class, 'cancel'])->name('cancel');
 
-            Route::get('connections/view', [ConnectionsController::class, 'view'])->name('fetch-connections');
-            Route::get('connections/message/{user_id}', [ConnectionsController::class, 'createMessage'])->name('create-message');
+    Route::get('connections/view', [ConnectionsController::class, 'view'])->name('fetch-connections');
+    Route::get('connections/message/{user_id}', [ConnectionsController::class, 'createMessage'])->name('create-message');
 
-         
-        Route::get('/', [NetworkController::class, 'index'])->name('index');
+
+    Route::get('/', [NetworkController::class, 'index'])->name('index');
 });
 
 
 
-    
+
 
 
 // Protected routes
@@ -123,8 +121,6 @@ Route::prefix('v1')->group(function () {
     Route::get('/products', [ProductsController::class, 'index']);
     Route::get('/products/donation', [ProductsController::class, 'donationProduct']);
     Route::get('/products/{id}', [ProductsController::class, 'show']);
-
-    
 });
 
 
@@ -172,7 +168,7 @@ Route::middleware('auth:sanctum')->prefix('v1')->group(function () {
     // Product management (seller only for write)
     Route::post('/products', [ProductsController::class, 'store']);
 
-        // Bidding
+    // Bidding
     Route::post('/products/bid/{id}', [ProductsController::class, 'submitBid']);
     Route::get('/my-biddings', [ProductsController::class, 'myBiddings']);
     Route::get('/biddings/{bidId}', [ProductsController::class, 'showBid']);
@@ -180,5 +176,4 @@ Route::middleware('auth:sanctum')->prefix('v1')->group(function () {
     Route::put('/products/{id}', [ProductsController::class, 'update']);
     Route::delete('/products/{id}', [ProductsController::class, 'destroy']);
     Route::delete('/products/images/{imageId}', [ProductsController::class, 'destroyImage']);
-
 });
