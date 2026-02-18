@@ -54,6 +54,7 @@ Route::middleware('auth:sanctum')->prefix('v1/settings')->as('settings.')->group
 });
 
 Route::middleware('auth:sanctum')->prefix('v1/notification')->as('notification.')->group(function () {
+    
     Route::get('/show', [NotificationController::class, 'index'])->name('notification_show');
     Route::patch('/read/{id}', [NotificationController::class, 'markAsRead'])->name('notification_read');
     Route::patch('/read-all', [NotificationController::class, 'markAllAsRead'])->name('notification_readAll');
