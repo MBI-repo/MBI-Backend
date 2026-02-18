@@ -13,6 +13,7 @@ class NotificationSettingsController extends Controller
 {
     public function viewSettings()
     {
+        return "Pelumi";
         try {
             $user = Auth::user();
 
