@@ -51,6 +51,8 @@ Route::middleware('auth:sanctum')->prefix('v1/settings')->as('settings.')->group
 
     Route::get('/notification/show', [NotificationSettingsController::class, 'viewSettings'])->name('settings_show');
     Route::put('/notification/update', [NotificationSettingsController::class, 'updateSettings'])->name('settings_update');
+
+    Route::delete('/delete', [ProfileController::class, 'destroy'])->name('account_delete');
 });
 
 Route::middleware('auth:sanctum')->prefix('v1/notification')->as('notification.')->group(function () {

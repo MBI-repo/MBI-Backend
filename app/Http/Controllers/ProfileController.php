@@ -373,4 +373,31 @@ class ProfileController extends Controller
         }
     }
 
+
+
+    public function destroy(Request $request)
+    {
+        try {
+            $user = User::find(Auth::id());
+            if (! $user) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Authenticated user not found',
+                ], 401);
+            }
+
+            $user->delete();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'User account deleted successfully.',
+            ], 200);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
 }
