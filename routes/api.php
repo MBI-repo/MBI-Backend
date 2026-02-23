@@ -17,6 +17,7 @@ use App\Http\Controllers\ReceivedController;
 use App\Http\Controllers\SentController;
 use App\Http\Controllers\WaitingListController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\ResourcesController;
 use App\Models\WaitingList;
 use Illuminate\Http\Request;
 use Illuminate\Broadcasting\BroadcastController;
@@ -126,6 +127,23 @@ Route::prefix('v1')->group(function () {
     Route::get('/products/{id}', [ProductsController::class, 'show']);
 });
 
+
+//this is the new resources endpoint
+Route::prefix('v1/resources')->group(function () {
+    Route::get('/journals', [ResourcesController::class, 'index']);
+    Route::get('/journals/{id}', [ResourcesController::class, 'show']);
+    Route::get('/articles', [ResourcesController::class, 'articlesIndex']);
+    Route::get('/articles/{id}', [ResourcesController::class, 'articlesShow']);
+});
+
+Route::middleware('auth:sanctum')->prefix('v1/resources')->group(function () {
+    Route::post('/journals', [ResourcesController::class, 'store']);
+    Route::put('/journals/{id}', [ResourcesController::class, 'update']);
+    Route::delete('/journals/{id}', [ResourcesController::class, 'destroy']);
+    Route::post('/articles', [ResourcesController::class, 'articlesStore']);
+    Route::put('/articles/{id}', [ResourcesController::class, 'articlesUpdate']);
+    Route::delete('/articles/{id}', [ResourcesController::class, 'articlesDestroy']);
+});
 
 
 // v1 Messaging & Groups API
