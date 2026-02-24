@@ -483,7 +483,7 @@ class ResourcesController extends Controller
             'abstract' => ['nullable', 'string'],
             'introduction' => ['nullable', 'string'],
             'body' => ['nullable', 'string'],
-            'image' => ['nullable', 'url'],
+            'image' => ['nullable'],
             'publication_url' => ['nullable', 'url'],
             'tags' => ['nullable'],
         ]);
