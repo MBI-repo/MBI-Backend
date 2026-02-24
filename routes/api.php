@@ -138,10 +138,10 @@ Route::prefix('v1/resources')->group(function () {
 
 Route::middleware('auth:sanctum')->prefix('v1/resources')->group(function () {
     Route::post('/journals', [ResourcesController::class, 'store']);
-    Route::put('/journals/{id}', [ResourcesController::class, 'update']);
+    Route::post('/journals/update/{id}', [ResourcesController::class, 'update']);
     Route::delete('/journals/{id}', [ResourcesController::class, 'destroy']);
     Route::post('/articles', [ResourcesController::class, 'articlesStore']);
-    Route::put('/articles/{id}', [ResourcesController::class, 'articlesUpdate']);
+    Route::post('/articles/update/{id}', [ResourcesController::class, 'articlesUpdate']);
     Route::delete('/articles/{id}', [ResourcesController::class, 'articlesDestroy']);
 });
 
