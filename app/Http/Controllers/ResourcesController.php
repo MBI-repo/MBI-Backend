@@ -502,6 +502,7 @@ class ResourcesController extends Controller
             $article->slug = $this->generateUniqueSlugForArticles($data['title']);
         }
 
+        return $request->all();
         if ($request->has('image')) {
             if (!empty($article->image_url) && Storage::disk('public')->exists($article->image_url)) {
                 Storage::disk('public')->delete($article->image_url);
