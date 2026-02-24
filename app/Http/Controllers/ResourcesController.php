@@ -508,7 +508,7 @@ class ResourcesController extends Controller
                 Storage::disk('public')->delete($article->image_url);
             }
             $file = $request->file('image');
-            return $file;
+            // return $file;
             $article->image_url = $file->store('articles', 'public');
         }
 
