@@ -507,6 +507,7 @@ class ResourcesController extends Controller
                 Storage::disk('public')->delete($article->image_url);
             }
             $file = $request->file('image');
+            return $file;
             $article->image_url = $file->store('articles', 'public');
         }
 
@@ -519,7 +520,7 @@ class ResourcesController extends Controller
             'abstract' => $data['abstract'] ?? $article->abstract,
             'introduction' => $data['introduction'] ?? $article->introduction,
             'body' => $data['body'] ?? $article->body,
-            'image_url' => $data['image_url'] ?? $article->image_url,
+            'image_url' => $article->image_url ?? $data['image_url'],
             'publication_url' => $data['publication_url'] ?? $article->publication_url,
             'tags' => $data['tags'] ?? $article->tags,
         ]);
