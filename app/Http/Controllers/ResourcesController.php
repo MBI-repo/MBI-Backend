@@ -278,6 +278,9 @@ class ResourcesController extends Controller
             'tags' => $data['tags'] ?? null,
         ]);
 
+        $baseUrl = 'https://api.mybridgeinternational.org/mybridge-backend-files/storage/app/public/';
+        $journal->document_path = $baseUrl . $journal->document_path;
+
         return response()->json([
             'success' => true,
             'message' => 'Journal created successfully',
@@ -295,6 +298,7 @@ class ResourcesController extends Controller
                 'message' => 'Unauthorized',
             ], 401);
         }
+
 
         $validator = Validator::make($request->all(), [
             'publication_year' => ['nullable', 'integer', 'min:1900', 'max:' . (date('Y') + 1)],
@@ -319,6 +323,11 @@ class ResourcesController extends Controller
         }
 
         $data = $validator->validated();
+        if ($request->hasFile('image')) {
+            $file = $request->file('image');
+            $imagePath = $file->store('articles', 'public');
+            $data['image_url'] = asset('storage/' . $imagePath);
+        }
 
         $slug = $this->generateUniqueSlugForArticles($data['title']);
 
@@ -340,6 +349,9 @@ class ResourcesController extends Controller
             'publication_url' => $data['publication_url'] ?? '',
             'tags' => $data['tags'] ?? null,
         ]);
+
+        $baseUrl = 'https://api.mybridgeinternational.org/mybridge-backend-files/storage/app/public/';
+        $article->image_url = $baseUrl . $article->image_url;
 
         return response()->json([
             'success' => true,
@@ -425,6 +437,9 @@ class ResourcesController extends Controller
 
         $journal->save();
 
+        $baseUrl = 'https://api.mybridgeinternational.org/mybridge-backend-files/storage/app/public/';
+        $journal->document_path = $baseUrl . $journal->document_path;
+
         return response()->json([
             'success' => true,
             'message' => 'Journal updated successfully',
@@ -502,6 +517,9 @@ class ResourcesController extends Controller
         ]);
 
         $article->save();
+
+        $baseUrl = 'https://api.mybridgeinternational.org/mybridge-backend-files/storage/app/public/';
+        $article->image_url = $baseUrl . $article->image_url;
 
         return response()->json([
             'success' => true,
