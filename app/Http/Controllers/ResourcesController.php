@@ -483,7 +483,7 @@ class ResourcesController extends Controller
             'abstract' => ['nullable', 'string'],
             'introduction' => ['nullable', 'string'],
             'body' => ['nullable', 'string'],
-            'image_url' => ['nullable', 'url'],
+            'image' => ['nullable', 'url'],
             'publication_url' => ['nullable', 'url'],
             'tags' => ['nullable'],
         ]);
@@ -502,7 +502,7 @@ class ResourcesController extends Controller
             $article->slug = $this->generateUniqueSlugForArticles($data['title']);
         }
 
-        return $request->all();
+        // return $request->all();
         if ($request->has('image')) {
             if (!empty($article->image_url) && Storage::disk('public')->exists($article->image_url)) {
                 Storage::disk('public')->delete($article->image_url);
