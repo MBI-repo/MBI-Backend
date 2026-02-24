@@ -502,11 +502,11 @@ class ResourcesController extends Controller
             $article->slug = $this->generateUniqueSlugForArticles($data['title']);
         }
 
-        if ($request->hasFile('image_url')) {
+        if ($request->hasFile('image')) {
             if (!empty($article->image_url) && Storage::disk('public')->exists($article->image_url)) {
                 Storage::disk('public')->delete($article->image_url);
             }
-            $file = $request->file('image_url');
+            $file = $request->file('image');
             $article->image_url = $file->store('articles', 'public');
         }
 
