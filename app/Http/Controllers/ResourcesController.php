@@ -113,7 +113,10 @@ class ResourcesController extends Controller
         $perPage = (int) $request->query('per_page', 20);
         $articles = $query->paginate($perPage);
 
-        $articles->getCollection()->transform(function (Articles $article) {
+         $baseUrl = 'https://api.mybridgeinternational.org/mybridge-backend-files/storage/app/public/';
+
+
+        $articles->getCollection()->transform(function (Articles $article) use ($baseUrl) {
             return [
                 'id' => $article->id,
                 'title' => $article->title,
@@ -126,7 +129,7 @@ class ResourcesController extends Controller
                 'abstract' => $article->abstract,
                 'introduction' => $article->introduction,
                 'body' => $article->body,
-                'image_url' => $article->image_url,
+                'image_url' => $article->image_url ? $baseUrl . $article->image_url :null,
                 'no_of_likes' => $article->no_of_likes,
                 'no_of_comments' => $article->no_of_comments,
                 'publication_url' => $article->publication_url,
@@ -192,6 +195,10 @@ class ResourcesController extends Controller
             ], 404);
         }
 
+         $baseUrl = 'https://api.mybridgeinternational.org/mybridge-backend-files/storage/app/public/';
+
+       
+
         $payload = [
             'id' => $article->id,
             'title' => $article->title,
@@ -204,7 +211,7 @@ class ResourcesController extends Controller
             'abstract' => $article->abstract,
             'introduction' => $article->introduction,
             'body' => $article->body,
-            'image_url' => $article->image_url,
+            'image_url' => $article->image_url ? $baseUrl . $article->image_url : null,
             'no_of_likes' => $article->no_of_likes,
             'no_of_comments' => $article->no_of_comments,
             'publication_url' => $article->publication_url,
