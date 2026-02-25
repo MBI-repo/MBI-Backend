@@ -13,7 +13,7 @@ return new class extends Migration
             $table->foreignId('user_id')->nullable()->constrained('users')->nullOnDelete();
             $table->string('title');
             $table->string('slug')->unique();
-            $table->string('status')->default('pending');
+            $table->string('status')->default('approved');
             $table->integer('publication_year')->nullable();
             $table->string('authors')->nullable();
             $table->enum('access_type', ['general', 'peer_reviewed'])->default('general');

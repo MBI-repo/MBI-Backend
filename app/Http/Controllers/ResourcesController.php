@@ -226,74 +226,167 @@ class ResourcesController extends Controller
             'data' => $payload,
         ]);
     }
-
     public function store(Request $request)
     {
-        $user = Auth::guard('sanctum')->user();
+        try {
+            $user = Auth::guard('sanctum')->user();
 
-        if (!$user) {
+            if (!$user) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Unauthorized',
+                ], 401);
+            }
+
+            $validator = Validator::make($request->all(), [
+                'publication_year' => ['nullable', 'integer', 'min:1900', 'max:' . (date('Y') + 1)],
+                'title' => ['required', 'string', 'max:255'],
+                'authors' => ['nullable', 'string', 'max:255'],
+                'access_type' => ['required', 'in:general,peer_reviewed'],
+                'is_restricted' => ['nullable', 'boolean'],
+                'abstract' => ['nullable', 'string'],
+                'introduction' => ['nullable', 'string'],
+                'publication_url' => ['nullable', 'url', 'required_without:document'],
+                'document' => ['nullable', 'file', 'mimes:pdf,jpeg,jpg,png', 'max:5120', 'required_without:publication_url'],
+                'tags' => ['nullable'],
+            ]);
+
+            if ($validator->fails()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Validation errors',
+                    'errors' => $validator->errors(),
+                ], 422);
+            }
+
+            $data = $validator->validated();
+
+            $slug = $this->generateUniqueSlug($data['title']);
+
+            $documentPath = null;
+            if ($request->hasFile('document')) {
+                $file = $request->file('document');
+                $documentPath = $file->store('journals', 'public');
+            }
+
+            $journal = Journals::create([
+                'user_id' => $user->id,
+                'title' => $data['title'],
+                'slug' => $slug,
+                'status' => 'pending',
+                'publication_year' => $data['publication_year'] ?? null,
+                'authors' => $data['authors'] ?? null,
+                'access_type' => $data['access_type'],
+                'is_restricted' => $data['is_restricted'] ?? false,
+                'abstract' => $data['abstract'] ?? null,
+                'introduction' => $data['introduction'] ?? null,
+                'publication_url' => $data['publication_url'] ?? null,
+                'document_path' => $documentPath,
+                'tags' => $data['tags'] ?? null,
+            ]);
+
+            $baseUrl = 'https://api.mybridgeinternational.org/mybridge-backend-files/storage/app/public/';
+            $journal->image_url = $baseUrl . $journal->image_url;
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Journal created successfully',
+                'data' => $journal,
+            ], 201);
+
+        } catch (\Illuminate\Database\QueryException $e) {
+
+            // Check if it's actually a duplicate slug error
+            if ($e->errorInfo[1] == 1062) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Duplicate slug detected. Please retry.',
+                ], 409);
+            }
+
             return response()->json([
                 'success' => false,
-                'message' => 'Unauthorized',
-            ], 401);
-        }
+                'message' => 'Database error occurred.',
+                'error' => $e->getMessage(),
+            ], 500);
 
-        $validator = Validator::make($request->all(), [
-            'publication_year' => ['nullable', 'integer', 'min:1900', 'max:' . (date('Y') + 1)],
-            'title' => ['required', 'string', 'max:255'],
-            'authors' => ['nullable', 'string', 'max:255'],
-            'access_type' => ['required', 'in:general,peer_reviewed'],
-            'is_restricted' => ['nullable', 'boolean'],
-            'abstract' => ['nullable', 'string'],
-            'introduction' => ['nullable', 'string'],
-            'publication_url' => ['nullable', 'url', 'required_without:document'],
-            'document' => ['nullable', 'file', 'mimes:pdf,jpeg,jpg,png', 'max:5120', 'required_without:publication_url'],
-            'tags' => ['nullable'],
-        ]);
+        } catch (\Exception $e) {
 
-        if ($validator->fails()) {
             return response()->json([
                 'success' => false,
-                'message' => 'Validation errors',
-                'errors' => $validator->errors(),
-            ], 422);
+                'message' => 'Something went wrong.',
+                'error' => $e->getMessage(),
+            ], 500);
         }
-
-        $data = $validator->validated();
-
-        $slug = $this->generateUniqueSlug($data['title']);
-
-        $documentPath = null;
-        if ($request->hasFile('document')) {
-            $file = $request->file('document');
-            $documentPath = $file->store('journals', 'public');
-        }
-
-        $journal = Journals::create([
-            'user_id' => $user->id,
-            'title' => $data['title'],
-            'slug' => $slug,
-            'status' => 'pending',
-            'publication_year' => $data['publication_year'] ?? null,
-            'authors' => $data['authors'] ?? null,
-            'access_type' => $data['access_type'],
-            'is_restricted' => $data['is_restricted'] ?? false,
-            'abstract' => $data['abstract'] ?? null,
-            'introduction' => $data['introduction'] ?? null,
-            'publication_url' => $data['publication_url'] ?? null,
-            'document_path' => $documentPath,
-            'tags' => $data['tags'] ?? null,
-        ]);
-
-        $baseUrl = 'https://api.mybridgeinternational.org/mybridge-backend-files/storage/app/public/';
-        $journal->document_path = $baseUrl . $journal->document_path;
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Journal created successfully',
-            'data' => $journal,
-        ], 201);
     }
+
+    // public function store(Request $request)
+    // {
+    //     $user = Auth::guard('sanctum')->user();
+
+    //     if (!$user) {
+    //         return response()->json([
+    //             'success' => false,
+    //             'message' => 'Unauthorized',
+    //         ], 401);
+    //     }
+
+    //     $validator = Validator::make($request->all(), [
+    //         'publication_year' => ['nullable', 'integer', 'min:1900', 'max:' . (date('Y') + 1)],
+    //         'title' => ['required', 'string', 'max:255'],
+    //         'authors' => ['nullable', 'string', 'max:255'],
+    //         'access_type' => ['required', 'in:general,peer_reviewed'],
+    //         'is_restricted' => ['nullable', 'boolean'],
+    //         'abstract' => ['nullable', 'string'],
+    //         'introduction' => ['nullable', 'string'],
+    //         'publication_url' => ['nullable', 'url', 'required_without:document'],
+    //         'document' => ['nullable', 'file', 'mimes:pdf,jpeg,jpg,png', 'max:5120', 'required_without:publication_url'],
+    //         'tags' => ['nullable'],
+    //     ]);
+
+    //     if ($validator->fails()) {
+    //         return response()->json([
+    //             'success' => false,
+    //             'message' => 'Validation errors',
+    //             'errors' => $validator->errors(),
+    //         ], 422);
+    //     }
+
+    //     $data = $validator->validated();
+
+    //     $slug = $this->generateUniqueSlug($data['title']);
+
+    //     $documentPath = null;
+    //     if ($request->hasFile('document')) {
+    //         $file = $request->file('document');
+    //         $documentPath = $file->store('journals', 'public');
+    //     }
+
+    //     $journal = Journals::create([
+    //         'user_id' => $user->id,
+    //         'title' => $data['title'],
+    //         'slug' => $slug,
+    //         'status' => 'pending',
+    //         'publication_year' => $data['publication_year'] ?? null,
+    //         'authors' => $data['authors'] ?? null,
+    //         'access_type' => $data['access_type'],
+    //         'is_restricted' => $data['is_restricted'] ?? false,
+    //         'abstract' => $data['abstract'] ?? null,
+    //         'introduction' => $data['introduction'] ?? null,
+    //         'publication_url' => $data['publication_url'] ?? null,
+    //         'document_path' => $documentPath,
+    //         'tags' => $data['tags'] ?? null,
+    //     ]);
+
+    //     $baseUrl = 'https://api.mybridgeinternational.org/mybridge-backend-files/storage/app/public/';
+    //     $journal->document_path = $baseUrl . $journal->document_path;
+
+    //     return response()->json([
+    //         'success' => true,
+    //         'message' => 'Journal created successfully',
+    //         'data' => $journal,
+    //     ], 201);
+    // }
 
     public function articlesStore(Request $request)
     {
@@ -633,18 +726,31 @@ class ResourcesController extends Controller
 
         return Journals::where('slug', $id)->first();
     }
-
     private function generateUniqueSlug(string $title): string
     {
-        $base = Str::slug($title);
-        $slug = $base;
-        $i = 1;
-        while (Journals::where('slug', $slug)->exists()) {
-            $slug = $base . '-' . $i;
-            $i++;
-        }
-        return $slug;
+    $base = Str::slug($title);
+    $slug = $base;
+    $i = 1;
+
+    while (Journals::withTrashed()->where('slug', $slug)->exists()) {
+        $slug = $base . '-' . $i;
+        $i++;
     }
+
+    return $slug;
+    }
+
+    // private function generateUniqueSlug(string $title): string
+    // {
+    //     $base = Str::slug($title);
+    //     $slug = $base;
+    //     $i = 1;
+    //     while (Journals::where('slug', $slug)->exists()) {
+    //         $slug = $base . '-' . $i;
+    //         $i++;
+    //     }
+    //     return $slug;
+    // }
 
     private function findArticle($id): ?Articles
     {
@@ -660,7 +766,7 @@ class ResourcesController extends Controller
         $base = Str::slug($title);
         $slug = $base;
         $i = 1;
-        while (Articles::where('slug', $slug)->exists()) {
+        while (Articles::withTrashed()->where('slug', $slug)->exists()) {
             $slug = $base . '-' . $i;
             $i++;
         }
