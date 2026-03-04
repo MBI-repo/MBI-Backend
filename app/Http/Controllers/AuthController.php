@@ -136,6 +136,7 @@ class AuthController extends Controller
         }
 
         $token = $user->createToken('auth_token')->plainTextToken;
+        $user->isseller = $user->category === 'seller';
 
         return response()->json([
             'success' => true,

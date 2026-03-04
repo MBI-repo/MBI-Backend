@@ -29,7 +29,8 @@ class User extends Authenticatable
         'status',
         'country',
         'facility_name',
-        'medical_licence'
+        'medical_licence',
+       
     ];
 
     public function sentConnections()

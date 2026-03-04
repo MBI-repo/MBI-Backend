@@ -185,6 +185,7 @@ Route::middleware('auth:sanctum')->prefix('v1')->group(function () {
 
     // Marketplace: seller docs
     Route::post('/marketplace/seller/docs', [MarketplaceController::class, 'updateSellerDocs']);
+    Route::post('/marketplace/seller/kyc', [MarketplaceController::class, 'verifyKyc']);
 
     // Product management (seller only for write)
     Route::post('/products', [ProductsController::class, 'store']);

@@ -103,4 +103,63 @@ class MarketplaceController extends Controller
             'data'    => $payload,
         ], 200);
     }
+
+   public function verifyKyc(Request $request)
+    {
+        try {
+
+            $user = Auth::guard('sanctum')->user();
+
+            if (!$user) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Unauthorized'
+                ], 401);
+            }
+
+            $validator = Validator::make($request->all(), [
+                'institution'   => ['required', 'string', 'max:255'],
+                'phone'    => ['required', 'string', 'max:255'],
+                'country'         => ['required', 'string', 'max:255'],
+                'license_number' => ['required', 'string', 'max:255'],
+            ]);
+
+            if ($validator->fails()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Validation errors',
+                    'errors' => $validator->errors(),
+                ], 422);
+            }
+
+            $data = $validator->validated();
+
+            $exists = User::where('uuid', $user->uuid)
+                ->where('institution', $data['institution'])
+                ->where('phone', $data['phone'])
+                // ->where('country', $data['country'])
+                ->where('license_number', $data['license_number'])
+                ->exists();
+
+            if (!$exists) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Submitted KYC data does not match user records'
+                ], 409);
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => 'KYC data verified successfully'
+            ]);
+
+        } catch (\Exception $e) {
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Something went wrong',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
 }
