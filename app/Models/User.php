@@ -30,6 +30,7 @@ class User extends Authenticatable
         'country',
         'facility_name',
         'medical_licence',
+        //'isSeller',
        
     ];
 
