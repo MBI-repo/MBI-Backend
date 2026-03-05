@@ -136,7 +136,15 @@ class AuthController extends Controller
         }
 
         $token = $user->createToken('auth_token')->plainTextToken;
-        $user->isseller = $user->category === 'Manufacturing, Supply & Logistics';
+        //$user->isseller = $user->category === 'Manufacturing, Supply & Logistics';
+
+        $user->isseller  =
+        $user->category === 'Manufacturing, Supply & Logistics' &&
+        $user->corporate_registration_papers &&
+        $user->product_approval &&
+        $user->warranty_policy_document &&
+        $user->export_capability_statement &&
+        $user->incoterms_preference;
 
         return response()->json([
             'success' => true,
