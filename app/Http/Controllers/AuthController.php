@@ -194,6 +194,8 @@ class AuthController extends Controller
             $user->setAttribute('network_count', $networkCount);
             $user->setAttribute('event_count', $eventCount);
 
+             $user->isseller = $user->category === 'seller';
+
             if (!empty($user->image)) {
                 $user->setAttribute('image', $this->toAbsoluteUrl($user->image));
             }
