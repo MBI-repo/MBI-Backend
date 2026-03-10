@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Models\Journals;
 use App\Models\Articles;
+use App\Models\Download;
+use App\Models\ResearchAndDevelopment;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
@@ -286,7 +288,9 @@ class ResourcesController extends Controller
             ]);
 
             $baseUrl = 'https://api.mybridgeinternational.org/mybridge-backend-files/storage/app/public/';
-            $journal->image_url = $baseUrl . $journal->image_url;
+            if ($journal->document_path) {
+                $journal->document_path = $baseUrl . $journal->document_path;
+            }
 
             return response()->json([
                 'success' => true,
@@ -716,6 +720,448 @@ class ResourcesController extends Controller
             'articleId' => (string) $articleId,
             'status' => 'deleted',
         ]);
+    }
+
+    public function trackDownload(Request $request)
+    {
+        $user = Auth::guard('sanctum')->user();
+
+        $validator = Validator::make($request->all(), [
+            'downloadable_id' => ['required'],
+            'resource_type' => ['required', 'in:Journal,Article,R&D'],
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation errors',
+                'errors' => $validator->errors(),
+            ], 422);
+        }
+
+        $download = Download::create([
+            'user_id' => $user ? $user->id : null,
+            'downloadable_id' => $request->downloadable_id,
+            'resource_type' => $request->resource_type,
+            'status' => 'successful',
+            'ip_address' => $request->ip(),
+            'user_agent' => $request->userAgent(),
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Download tracked successfully',
+            'data' => $download,
+        ], 201);
+    }
+
+    public function rdIndex(Request $request)
+    {
+        $query = ResearchAndDevelopment::query()->orderByDesc('created_at');
+
+        if ($accessType = $request->query('access_type')) {
+            $query->where('access_type', $accessType);
+        }
+
+        if ($status = $request->query('status')) {
+            $query->where('status', $status);
+        }
+
+        if ($scope = $request->query('scope')) {
+            if ($scope === 'mine') {
+                $user = Auth::guard('sanctum')->user();
+                if ($user) {
+                    $query->where('user_id', $user->id);
+                } else {
+                    $query->whereNull('user_id');
+                }
+            }
+        }
+
+        if ($search = $request->query('q')) {
+            $query->where(function ($w) use ($search) {
+                $w->where('title', 'like', '%' . $search . '%')
+                    ->orWhere('principal_investigator', 'like', '%' . $search . '%')
+                    ->orWhere('abstract', 'like', '%' . $search . '%');
+            });
+        }
+
+        $perPage = (int) $request->query('per_page', 20);
+        $rds = $query->paginate($perPage);
+
+        $baseUrl = 'https://api.mybridgeinternational.org/mybridge-backend-files/storage/app/public/';
+
+        $rds->getCollection()->transform(function (ResearchAndDevelopment $rd) use ($baseUrl) {
+            return [
+                'id' => $rd->id,
+                'title' => $rd->title,
+                'slug' => $rd->slug,
+                'status' => $rd->status,
+                'category' => $rd->category,
+                'principal_investigator' => $rd->principal_investigator,
+                'abstract' => $rd->abstract,
+                'tags' => $rd->tags,
+                'ethical_approval_id' => $rd->ethical_approval_id,
+                'ethical_approval_file_url' => $rd->ethical_approval_file ? $baseUrl . $rd->ethical_approval_file : null,
+                'study_design' => $rd->study_design,
+                'methodology' => $rd->methodology,
+                'institution' => $rd->institution,
+                'conflict_of_interest' => $rd->conflict_of_interest,
+                'funding_disclosure' => $rd->funding_disclosure,
+                'data_sources' => $rd->data_sources,
+                'external_url' => $rd->external_url,
+                'document_url' => $rd->document_path ? $baseUrl . $rd->document_path : null,
+                'access_type' => $rd->access_type,
+                'clinical_phase' => $rd->clinical_phase,
+                'peer_review' => $rd->peer_review,
+                'funding_state' => $rd->funding_state,
+                'methodology_type' => $rd->methodology_type,
+                'country_region' => $rd->country_region,
+                'created_at' => $rd->created_at,
+                'updated_at' => $rd->updated_at,
+            ];
+        });
+
+        return response()->json([
+            'success' => true,
+            'message' => 'R&D records fetched successfully',
+            'data' => $rds,
+        ]);
+    }
+
+    public function rdShow($id)
+    {
+        $rd = $this->findRD($id);
+
+        if (!$rd) {
+            return response()->json([
+                'success' => false,
+                'message' => 'R&D record not found',
+            ], 404);
+        }
+
+        $baseUrl = 'https://api.mybridgeinternational.org/mybridge-backend-files/storage/app/public/';
+
+        $payload = [
+            'id' => $rd->id,
+            'title' => $rd->title,
+            'slug' => $rd->slug,
+            'status' => $rd->status,
+            'category' => $rd->category,
+            'principal_investigator' => $rd->principal_investigator,
+            'abstract' => $rd->abstract,
+            'tags' => $rd->tags,
+            'ethical_approval_id' => $rd->ethical_approval_id,
+            'ethical_approval_file_url' => $rd->ethical_approval_file ? $baseUrl . $rd->ethical_approval_file : null,
+            'study_design' => $rd->study_design,
+            'methodology' => $rd->methodology,
+            'institution' => $rd->institution,
+            'conflict_of_interest' => $rd->conflict_of_interest,
+            'funding_disclosure' => $rd->funding_disclosure,
+            'data_sources' => $rd->data_sources,
+            'external_url' => $rd->external_url,
+            'document_url' => $rd->document_path ? $baseUrl . $rd->document_path : null,
+            'access_type' => $rd->access_type,
+            'clinical_phase' => $rd->clinical_phase,
+            'peer_review' => $rd->peer_review,
+            'funding_state' => $rd->funding_state,
+            'methodology_type' => $rd->methodology_type,
+            'country_region' => $rd->country_region,
+            'created_at' => $rd->created_at,
+            'updated_at' => $rd->updated_at,
+        ];
+
+        return response()->json([
+            'success' => true,
+            'message' => 'R&D record fetched successfully',
+            'data' => $payload,
+        ]);
+    }
+
+    public function rdStore(Request $request)
+    {
+        $user = Auth::guard('sanctum')->user();
+
+        if (!$user) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorized',
+            ], 401);
+        }
+
+        $validator = Validator::make($request->all(), [
+            'title' => ['required', 'string', 'max:255'],
+            'principal_investigator' => ['required', 'string', 'max:255'],
+            'category' => ['nullable', 'string', 'max:255'],
+            'abstract' => ['nullable', 'string'],
+            'tags' => ['nullable'],
+            'ethical_approval_id' => ['nullable', 'string'],
+            'ethical_approval_file' => ['nullable', 'file', 'max:5120'],
+            'study_design' => ['nullable'],
+            'methodology' => ['nullable'],
+            'institution' => ['nullable', 'string'],
+            'conflict_of_interest' => ['nullable', 'string'],
+            'funding_disclosure' => ['nullable', 'string'],
+            'data_sources' => ['nullable'],
+            'external_url' => ['nullable', 'url'],
+            'document' => ['nullable', 'file', 'max:5120'],
+            'status' => ['nullable', 'string'],
+            'access_type' => ['nullable', 'string'],
+            'clinical_phase' => ['nullable', 'string'],
+            'peer_review' => ['nullable', 'string'],
+            'funding_state' => ['nullable', 'string'],
+            'methodology_type' => ['nullable', 'string'],
+            'country_region' => ['nullable', 'string'],
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation errors',
+                'errors' => $validator->errors(),
+            ], 422);
+        }
+
+        $data = $validator->validated();
+        $slug = $this->generateUniqueSlugForRD($data['title']);
+
+        $ethicalApprovalFilePath = null;
+        if ($request->hasFile('ethical_approval_file')) {
+            $ethicalApprovalFilePath = $request->file('ethical_approval_file')->store('rd/ethical_approvals', 'public');
+        }
+
+        $documentPath = null;
+        if ($request->hasFile('document')) {
+            $documentPath = $request->file('document')->store('rd/documents', 'public');
+        }
+
+        $rd = ResearchAndDevelopment::create([
+            'user_id' => $user->id,
+            'title' => $data['title'],
+            'principal_investigator' => $data['principal_investigator'],
+            'slug' => $slug,
+            'category' => $data['category'] ?? null,
+            'abstract' => $data['abstract'] ?? null,
+            'tags' => $data['tags'] ?? null,
+            'ethical_approval_id' => $data['ethical_approval_id'] ?? null,
+            'ethical_approval_file' => $ethicalApprovalFilePath,
+            'study_design' => $data['study_design'] ?? null,
+            'methodology' => $data['methodology'] ?? null,
+            'institution' => $data['institution'] ?? null,
+            'conflict_of_interest' => $data['conflict_of_interest'] ?? null,
+            'funding_disclosure' => $data['funding_disclosure'] ?? null,
+            'data_sources' => $data['data_sources'] ?? null,
+            'external_url' => $data['external_url'] ?? null,
+            'document_path' => $documentPath,
+            'status' => $data['status'] ?? 'draft',
+            'access_type' => $data['access_type'] ?? 'general',
+            'clinical_phase' => $data['clinical_phase'] ?? null,
+            'peer_review' => $data['peer_review'] ?? null,
+            'funding_state' => $data['funding_state'] ?? null,
+            'methodology_type' => $data['methodology_type'] ?? null,
+            'country_region' => $data['country_region'] ?? null,
+        ]);
+
+        $baseUrl = 'https://api.mybridgeinternational.org/mybridge-backend-files/storage/app/public/';
+        if ($rd->ethical_approval_file) {
+            $rd->ethical_approval_file = $baseUrl . $rd->ethical_approval_file;
+        }
+        if ($rd->document_path) {
+            $rd->document_path = $baseUrl . $rd->document_path;
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'R&D record created successfully',
+            'data' => $rd,
+        ], 201);
+    }
+
+    public function rdUpdate($id, Request $request)
+    {
+        $user = Auth::guard('sanctum')->user();
+
+        if (!$user) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorized',
+            ], 401);
+        }
+
+        $rd = $this->findRD($id);
+
+        if (!$rd) {
+            return response()->json([
+                'success' => false,
+                'message' => 'R&D record not found',
+            ], 404);
+        }
+
+        if ($rd->user_id && $rd->user_id !== $user->id) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Forbidden',
+            ], 403);
+        }
+
+        $validator = Validator::make($request->all(), [
+            'title' => ['nullable', 'string', 'max:255'],
+            'principal_investigator' => ['nullable', 'string', 'max:255'],
+            'category' => ['nullable', 'string', 'max:255'],
+            'abstract' => ['nullable', 'string'],
+            'tags' => ['nullable'],
+            'ethical_approval_id' => ['nullable', 'string'],
+            'ethical_approval_file' => ['nullable', 'file', 'max:5120'],
+            'study_design' => ['nullable'],
+            'methodology' => ['nullable'],
+            'institution' => ['nullable', 'string'],
+            'conflict_of_interest' => ['nullable', 'string'],
+            'funding_disclosure' => ['nullable', 'string'],
+            'data_sources' => ['nullable'],
+            'external_url' => ['nullable', 'url'],
+            'document' => ['nullable', 'file', 'max:5120'],
+            'status' => ['nullable', 'string'],
+            'access_type' => ['nullable', 'string'],
+            'clinical_phase' => ['nullable', 'string'],
+            'peer_review' => ['nullable', 'string'],
+            'funding_state' => ['nullable', 'string'],
+            'methodology_type' => ['nullable', 'string'],
+            'country_region' => ['nullable', 'string'],
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation errors',
+                'errors' => $validator->errors(),
+            ], 422);
+        }
+
+        $data = $validator->validated();
+
+        if (!empty($data['title']) && $data['title'] !== $rd->title) {
+            $rd->slug = $this->generateUniqueSlugForRD($data['title']);
+        }
+
+        if ($request->hasFile('ethical_approval_file')) {
+            if ($rd->ethical_approval_file && Storage::disk('public')->exists($rd->ethical_approval_file)) {
+                Storage::disk('public')->delete($rd->ethical_approval_file);
+            }
+            $rd->ethical_approval_file = $request->file('ethical_approval_file')->store('rd/ethical_approvals', 'public');
+        }
+
+        if ($request->hasFile('document')) {
+            if ($rd->document_path && Storage::disk('public')->exists($rd->document_path)) {
+                Storage::disk('public')->delete($rd->document_path);
+            }
+            $rd->document_path = $request->file('document')->store('rd/documents', 'public');
+        }
+
+        $rd->fill([
+            'title' => $data['title'] ?? $rd->title,
+            'principal_investigator' => $data['principal_investigator'] ?? $rd->principal_investigator,
+            'category' => $data['category'] ?? $rd->category,
+            'abstract' => $data['abstract'] ?? $rd->abstract,
+            'tags' => $data['tags'] ?? $rd->tags,
+            'ethical_approval_id' => $data['ethical_approval_id'] ?? $rd->ethical_approval_id,
+            'study_design' => $data['study_design'] ?? $rd->study_design,
+            'methodology' => $data['methodology'] ?? $rd->methodology,
+            'institution' => $data['institution'] ?? $rd->institution,
+            'conflict_of_interest' => $data['conflict_of_interest'] ?? $rd->conflict_of_interest,
+            'funding_disclosure' => $data['funding_disclosure'] ?? $rd->funding_disclosure,
+            'data_sources' => $data['data_sources'] ?? $rd->data_sources,
+            'external_url' => $data['external_url'] ?? $rd->external_url,
+            'status' => $data['status'] ?? $rd->status,
+            'access_type' => $data['access_type'] ?? $rd->access_type,
+            'clinical_phase' => $data['clinical_phase'] ?? $rd->clinical_phase,
+            'peer_review' => $data['peer_review'] ?? $rd->peer_review,
+            'funding_state' => $data['funding_state'] ?? $rd->funding_state,
+            'methodology_type' => $data['methodology_type'] ?? $rd->methodology_type,
+            'country_region' => $data['country_region'] ?? $rd->country_region,
+        ]);
+
+        $rd->save();
+
+        $baseUrl = 'https://api.mybridgeinternational.org/mybridge-backend-files/storage/app/public/';
+        if ($rd->ethical_approval_file) {
+            $rd->ethical_approval_file = $baseUrl . $rd->ethical_approval_file;
+        }
+        if ($rd->document_path) {
+            $rd->document_path = $baseUrl . $rd->document_path;
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'R&D record updated successfully',
+            'data' => $rd,
+        ]);
+    }
+
+    public function rdDestroy($id, Request $request)
+    {
+        $user = Auth::guard('sanctum')->user();
+
+        if (!$user) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorized',
+            ], 401);
+        }
+
+        $rd = $this->findRD($id);
+
+        if (!$rd) {
+            return response()->json([
+                'success' => false,
+                'message' => 'R&D record not found',
+            ], 404);
+        }
+
+        if ($rd->user_id && $rd->user_id !== $user->id) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Forbidden',
+            ], 403);
+        }
+
+        if ($rd->ethical_approval_file && Storage::disk('public')->exists($rd->ethical_approval_file)) {
+            Storage::disk('public')->delete($rd->ethical_approval_file);
+        }
+
+        if ($rd->document_path && Storage::disk('public')->exists($rd->document_path)) {
+            Storage::disk('public')->delete($rd->document_path);
+        }
+
+        $rdId = $rd->id;
+        $rd->delete();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'R&D record deleted successfully',
+            'rdId' => (string) $rdId,
+            'status' => 'deleted',
+        ]);
+    }
+
+    private function findRD($id): ?ResearchAndDevelopment
+    {
+        if (is_numeric($id)) {
+            return ResearchAndDevelopment::find($id);
+        }
+
+        return ResearchAndDevelopment::where('slug', $id)->first();
+    }
+
+    private function generateUniqueSlugForRD(string $title): string
+    {
+        $base = Str::slug($title);
+        $slug = $base;
+        $i = 1;
+        while (ResearchAndDevelopment::withTrashed()->where('slug', $slug)->exists()) {
+            $slug = $base . '-' . $i;
+            $i++;
+        }
+        return $slug;
     }
 
     private function findJournal($id): ?Journals

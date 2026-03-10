@@ -134,6 +134,9 @@ Route::prefix('v1/resources')->group(function () {
     Route::get('/journals/{id}', [ResourcesController::class, 'show']);
     Route::get('/articles', [ResourcesController::class, 'articlesIndex']);
     Route::get('/articles/{id}', [ResourcesController::class, 'articlesShow']);
+    Route::get('/rd', [ResourcesController::class, 'rdIndex']);
+    Route::get('/rd/{id}', [ResourcesController::class, 'rdShow']);
+    Route::post('/track-download', [ResourcesController::class, 'trackDownload']);
 });
 
 Route::middleware('auth:sanctum')->prefix('v1/resources')->group(function () {
@@ -143,6 +146,9 @@ Route::middleware('auth:sanctum')->prefix('v1/resources')->group(function () {
     Route::post('/articles', [ResourcesController::class, 'articlesStore']);
     Route::post('/articles/update/{id}', [ResourcesController::class, 'articlesUpdate']);
     Route::delete('/articles/{id}', [ResourcesController::class, 'articlesDestroy']);
+    Route::post('/rd', [ResourcesController::class, 'rdStore']);
+    Route::post('/rd/update/{id}', [ResourcesController::class, 'rdUpdate']);
+    Route::delete('/rd/{id}', [ResourcesController::class, 'rdDestroy']);
 });
 
 
