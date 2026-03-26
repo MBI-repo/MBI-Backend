@@ -104,7 +104,86 @@ class MarketplaceController extends Controller
         ], 200);
     }
 
-   public function verifyKyc(Request $request)
+    // public function verifyKyc(Request $request)
+    // {
+    //     try {
+
+    //         $user = Auth::guard('sanctum')->user();
+
+    //         if (!$user) {
+    //             return response()->json([
+    //                 'success' => false,
+    //                 'message' => 'Unauthorized'
+    //             ], 401);
+    //         }
+
+    //         $validator = Validator::make($request->all(), [
+    //             'institution'   => ['required', 'string', 'max:255'],
+    //             'phone'         => ['required', 'string', 'max:255'],
+    //             'country'       => ['required', 'string', 'max:255'],
+    //             'license_number'=> ['required', 'string', 'max:255'],
+    //         ]);
+
+    //         if ($validator->fails()) {
+    //             return response()->json([
+    //                 'success' => false,
+    //                 'message' => 'Validation errors',
+    //                 'errors'  => $validator->errors(),
+    //             ], 422);
+    //         }
+
+    //         $data = $validator->validated();
+
+    //         /*
+    //         If license_number is null, save the KYC details
+    //         */
+    //         if (is_null($user->license_number)) {
+    //             User::where('id', $user->id)->update([
+    //                 // 'institution'    => $data['institution'],
+    //                 // 'phone'          => $data['phone'],
+    //                 // 'country'        => $data['country'],
+    //                 'license_number' => $data['license_number'],
+    //             ]);
+
+    //             // return response()->json([
+    //             //     'success' => true,
+    //             //     'message' => 'KYC data saved successfully'
+    //             // ]);
+    //         }
+
+    //         /*
+    //         If license already exists, verify it
+    //         */
+    //         $exists = User::where('uuid', $user->uuid)
+    //             ->where('institution', $data['institution'])
+    //             ->where('phone', $data['phone'])
+    //             // ->where('country', $data['country'])
+    //             ->where('license_number', $data['license_number'])
+    //             ->exists();
+
+    //         if (!$exists) {
+    //             return response()->json([
+    //                 'success' => false,
+    //                 'message' => 'Submitted KYC data does not match user records'
+    //             ], 409);
+    //         }
+
+    //         return response()->json([
+    //             'success' => true,
+    //             'message' => 'KYC data verified successfully'
+    //         ]);
+
+    //     } catch (\Exception $e) {
+
+    //         return response()->json([
+    //             'success' => false,
+    //             'message' => 'Something went wrong',
+    //             'error'   => $e->getMessage()
+    //         ], 500);
+    //     }
+    // }
+
+    public function verifyKyc(Request $request)
     {
         try {
 
@@ -119,29 +198,41 @@ class MarketplaceController extends Controller
 
             $validator = Validator::make($request->all(), [
                 'institution'   => ['required', 'string', 'max:255'],
-                'phone'    => ['required', 'string', 'max:255'],
-                'country'         => ['required', 'string', 'max:255'],
-                'license_number' => ['required', 'string', 'max:255'],
+                'phone'         => ['required', 'string', 'max:255'],
+                'country'       => ['required', 'string', 'max:255'],
+                'license_number'=> ['required', 'string', 'max:255'],
             ]);
 
             if ($validator->fails()) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Validation errors',
-                    'errors' => $validator->errors(),
+                    'errors'  => $validator->errors(),
                 ], 422);
             }
 
             $data = $validator->validated();
 
-            $exists = User::where('uuid', $user->uuid)
-                ->where('institution', $data['institution'])
-                ->where('phone', $data['phone'])
-                // ->where('country', $data['country'])
-                ->where('license_number', $data['license_number'])
-                ->exists();
+            /*
+            If license_number is null, save it first
+            */
+            if (is_null($user->license_number)) {
+                $user->update([
+                    'license_number' => $data['license_number']
+                ]);
 
-            if (!$exists) {
+                // refresh user instance
+                $user->refresh();
+            }
+
+            /*
+            Verify KYC details
+            */
+            if (
+                $user->institution !== $data['institution'] ||
+                $user->phone !== $data['phone'] ||
+                $user->license_number !== $data['license_number']
+            ) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Submitted KYC data does not match user records'
@@ -158,7 +249,7 @@ class MarketplaceController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Something went wrong',
-                'error' => $e->getMessage()
+                'error'   => $e->getMessage()
             ], 500);
         }
     }
