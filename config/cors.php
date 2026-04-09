@@ -23,8 +23,8 @@ return [
     'allowed_origins' => [
         'https://main.dx2vvqpb31tcm.amplifyapp.com',
         'https://www.main.dx2vvqpb31tcm.amplifyapp.com',
-        'https://www.portal.mybridgeinternational.com',
-        'https://portal.mybridgeinternational.com',
+        'https://www.portal.mybridgeinternational.org',
+        'https://portal.mybridgeinternational.org',
         'http://localhost:3000',
         'http://127.0.0.1:3000',
         'http://localhost:3001',
