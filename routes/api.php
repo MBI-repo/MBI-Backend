@@ -18,6 +18,7 @@ use App\Http\Controllers\SentController;
 use App\Http\Controllers\WaitingListController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ResourcesController;
+use App\Http\Controllers\LaboratoryController;
 use App\Models\WaitingList;
 use Illuminate\Http\Request;
 use Illuminate\Broadcasting\BroadcastController;
@@ -57,7 +58,7 @@ Route::middleware('auth:sanctum')->prefix('v1/settings')->as('settings.')->group
 });
 
 Route::middleware('auth:sanctum')->prefix('v1/notification')->as('notification.')->group(function () {
-    
+
     Route::get('/show', [NotificationController::class, 'index'])->name('notification_show');
     Route::patch('/read/{id}', [NotificationController::class, 'markAsRead'])->name('notification_read');
     Route::patch('/read-all', [NotificationController::class, 'markAllAsRead'])->name('notification_readAll');
@@ -204,4 +205,25 @@ Route::middleware('auth:sanctum')->prefix('v1')->group(function () {
     Route::put('/products/{id}', [ProductsController::class, 'update']);
     Route::delete('/products/{id}', [ProductsController::class, 'destroy']);
     Route::delete('/products/images/{imageId}', [ProductsController::class, 'destroyImage']);
+
+    // Laboratory
+    Route::prefix('laboratory')->group(function () {
+        Route::get('/orders', [LaboratoryController::class, 'index']);
+        Route::post('/orders', [LaboratoryController::class, 'store']);
+        Route::get('/orders/{id}', [LaboratoryController::class, 'show']);
+        Route::put('/orders/{id}', [LaboratoryController::class, 'update']);
+        Route::delete('/orders/{id}', [LaboratoryController::class, 'destroy']);
+        Route::get('/categories', [LaboratoryController::class, 'categories']);
+        Route::get('/centers', [LaboratoryController::class, 'labCenters']);
+
+        // Equipment
+        Route::get('/equipments', [LaboratoryController::class, 'equipmentIndex']);
+        Route::post('/equipments', [LaboratoryController::class, 'equipmentStore']);
+        Route::delete('/equipments/{id}', [LaboratoryController::class, 'equipmentDelete']);
+
+        // Results
+        Route::get('/results', [LaboratoryController::class, 'resultsIndex']);
+        Route::post('/results', [LaboratoryController::class, 'resultsStore']);
+        Route::get('/results/{id}', [LaboratoryController::class, 'resultsShow']);
+    });
 });

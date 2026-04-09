@@ -19,9 +19,19 @@ return [
 
     'allowed_methods' => ['*'],
 
-    'allowed_origins' => ['http://localhost:3000', 'http://127.0.0.1:3000'], 
+    // 'allowed_origins' => ['http://localhost:3000', 'http://127.0.0.1:3000'], 
+    'allowed_origins' => [
+        'https://main.dx2vvqpb31tcm.amplifyapp.com',
+        'https://www.main.dx2vvqpb31tcm.amplifyapp.com',
+        'https://www.portal.mybridgeinternational.com',
+        'https://portal.mybridgeinternational.com',
+        'http://localhost:3000',
+        'http://127.0.0.1:3000',
+        'http://localhost:3001',
+        'http://127.0.0.1:3001',
+    ],
 
-    // 'allowed_origins' => ['*'],
+    'allowed_origins' => ['*'],
 
     'allowed_origins_patterns' => [],
 
