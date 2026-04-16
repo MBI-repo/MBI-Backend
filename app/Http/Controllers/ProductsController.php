@@ -132,14 +132,17 @@ class ProductsController extends Controller
         $validator = Validator::make($request->all(), [
             'name'        => ['required', 'string', 'max:255'],
             'price'       => ['required', 'numeric', 'min:0'],
+            'stock'       => ['required', 'integer', 'min:0'],
+            'status'      => ['required', 'string', 'max:255'],
             'category'    => ['required', 'string', 'max:255'],
             'description' => ['required', 'string'],
             'waranty'     => ['required', 'string', 'max:255'],
 
             // Optional fields
-            'discount_code'            => ['nullable', 'string', 'max:255'],
-            'ukca_mark'                => ['nullable', 'string', 'max:255'],
+            'discount'                  => ['nullable', 'string', 'max:255'],
+            'link'                      => ['nullable', 'string', 'max:255'],
             'manufacturer'             => ['nullable', 'string', 'max:255'],
+            'ukca_mark'                => ['nullable', 'string', 'max:255'],
             'model_number'             => ['nullable', 'string', 'max:255'],
             'condition'                => ['nullable', 'string', 'max:255'],
             'age_of_equipment'         => ['nullable', 'string', 'max:255'],
@@ -152,8 +155,10 @@ class ProductsController extends Controller
             'shipping_cost_contribution'=> ['nullable', 'string', 'max:255'],
 
             // Photos
-            'photos'                    => ['nullable', 'array'],
-            'photos.*'                  => ['file', 'image', 'mimes:jpeg,jpg,png,gif,webp'],
+            'images'                    => ['nullable', 'array'],
+            'images.*'                  => ['file', 'image', 'mimes:jpeg,jpg,png,gif,webp'],
+            // 'photos'                    => ['nullable', 'array'],
+            // 'photos.*'                  => ['file', 'image', 'mimes:jpeg,jpg,png,gif,webp'],
         ]);
         if ($validator->fails()) {
             return response()->json([
@@ -170,8 +175,8 @@ class ProductsController extends Controller
         $product->created_by   = $user->id;
         $product->save();
 
-        if ($request->hasFile('photos')) {
-            foreach ($request->file('photos') as $idx => $file) {
+        if ($request->hasFile('images')) {
+            foreach ($request->file('images') as $idx => $file) {
                 $path = $file->store('product_images', 'public');
                 ProductImage::create([
                     'product_id' => $product->id,
@@ -205,13 +210,16 @@ class ProductsController extends Controller
         $validator = Validator::make($request->all(), [
             'name'        => ['sometimes', 'string', 'max:255'],
             'price'       => ['sometimes', 'numeric', 'min:0'],
+            'stock'       => ['sometimes', 'integer', 'min:0'],
+            'status'      => ['sometimes', 'string', 'max:255'],
             'category'    => ['sometimes', 'string', 'max:255'],
             'description' => ['sometimes', 'string'],
             'waranty'     => ['sometimes', 'string', 'max:255'],
 
-            'discount_code'            => ['nullable', 'string', 'max:255'],
-            'ukca_mark'                => ['nullable', 'string', 'max:255'],
+            'discount'            => ['nullable', 'string', 'max:255'],
+            'link'                => ['nullable', 'string', 'max:255'],
             'manufacturer'             => ['nullable', 'string', 'max:255'],
+            'ukca_mark'                => ['nullable', 'string', 'max:255'],
             'model_number'             => ['nullable', 'string', 'max:255'],
             'condition'                => ['nullable', 'string', 'max:255'],
             'age_of_equipment'         => ['nullable', 'string', 'max:255'],
@@ -223,8 +231,8 @@ class ProductsController extends Controller
             'equipment_location'       => ['nullable', 'string', 'max:255'],
             'shipping_cost_contribution'=> ['nullable', 'string', 'max:255'],
 
-            'photos'                    => ['nullable', 'array'],
-            'photos.*'                  => ['file', 'image', 'mimes:jpeg,jpg,png,gif,webp'],
+            'images'                    => ['nullable', 'array'],
+            'images.*'                  => ['file', 'image', 'mimes:jpeg,jpg,png,gif,webp'],
         ]);
         if ($validator->fails()) {
             return response()->json([
@@ -238,9 +246,9 @@ class ProductsController extends Controller
         $product->fill($validated);
         $product->save();
 
-        if ($request->hasFile('photos')) {
+        if ($request->hasFile('images')) {
             $currentCount = ProductImage::where('product_id', $product->id)->count();
-            foreach ($request->file('photos') as $idx => $file) {
+            foreach ($request->file('images') as $idx => $file) {
                 $path = $file->store('product_images', 'public');
                 ProductImage::create([
                     'product_id' => $product->id,

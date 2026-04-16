@@ -38,7 +38,8 @@ class MarketplaceController extends Controller
             'product_approval'              => ['nullable', 'file'],
             'warranty_policy_document'      => ['nullable', 'file'],
             'export_capability_statement'   => ['nullable', 'file'],
-            'incoterms_preference'          => ['nullable', 'string'],
+            // 'incoterms_preference'          => ['nullable', 'string'],
+            'incoterms_preference'          => ['nullable', 'file'],
             'admin_comment'                 => ['nullable', 'string'],
             'rejection_comment'             => ['nullable', 'string'],
         ]);
@@ -67,11 +68,12 @@ class MarketplaceController extends Controller
         $storeFile('product_approval');
         $storeFile('warranty_policy_document');
         $storeFile('export_capability_statement');
+        $storeFile('incoterms_preference');
 
         // Non-file fields
-        if ($request->filled('incoterms_preference')) {
-            $user->incoterms_preference = $request->input('incoterms_preference');
-        }
+        // if ($request->filled('incoterms_preference')) {
+        //     $user->incoterms_preference = $request->input('incoterms_preference');
+        // }
         if ($request->filled('admin_comment')) {
             $user->admin_comment = $request->input('admin_comment');
         }
@@ -88,13 +90,14 @@ class MarketplaceController extends Controller
             'uuid'                        => $user->uuid,
             'full_name'                  => $user->full_name,
             'email'                      => $user->email,
-            'incoterms_preference'       => $user->incoterms_preference,
+            // 'incoterms_preference'       => $user->incoterms_preference,
             'admin_comment'              => $user->admin_comment,
             'rejection_comment'          => $user->rejection_comment,
             'corporate_registration_papers' => $user->corporate_registration_papers ? $baseUrl . $user->corporate_registration_papers : null,
             'product_approval'              => $user->product_approval ? $baseUrl . $user->product_approval : null,
             'warranty_policy_document'      => $user->warranty_policy_document ? $baseUrl . $user->warranty_policy_document : null,
             'export_capability_statement'   => $user->export_capability_statement ? $baseUrl . $user->export_capability_statement : null,
+            'incoterms_preference'       => $user->incoterms_preference ? $baseUrl . $user->incoterms_preference : null,
         ];
 
         return response()->json([

@@ -13,14 +13,17 @@ class Product extends Model
     protected $fillable = [
         'uuid',
         'product_type',
-        'price',
-        'category',
         'name',
+        'price',
+        'discount',
+        'stock',
+        'status',
+        'manufacturer',
+        'category',
+        'link',
         'description',
-        'discount_code',
         'waranty',
         'ukca_mark',
-        'manufacturer',
         'model_number',
         'condition',
         'age_of_equipment',
@@ -31,7 +34,6 @@ class Product extends Model
         'pickup_available_date',
         'equipment_location',
         'shipping_cost_contribution',
-       
         'created_by',
     ];
 
