@@ -125,9 +125,12 @@ class ProductsController extends Controller
         if (! $user) {
             return response()->json(['status' => false, 'message' => 'Unauthorized'], 401);
         }
-        if ($user->category !== 'seller') {
+         if ($user->isseller !== true) {
             return response()->json(['status' => false, 'message' => 'Only sellers can add products'], 403);
         }
+        // if ($user->category !== 'seller') {
+        //     return response()->json(['status' => false, 'message' => 'Only sellers can add products'], 403);
+        // }
 
         $validator = Validator::make($request->all(), [
             'name'        => ['required', 'string', 'max:255'],
@@ -203,9 +206,12 @@ class ProductsController extends Controller
         if (! $product) {
             return response()->json(['status' => false, 'message' => 'Product not found'], 404);
         }
-        if ($user->category !== 'seller' || $product->created_by !== $user->id) {
+        if ($user->isseller !== true || $product->created_by !== $user->id) {
             return response()->json(['status' => false, 'message' => 'Forbidden'], 403);
         }
+        // if ($user->category !== 'seller' || $product->created_by !== $user->id) {
+        //     return response()->json(['status' => false, 'message' => 'Forbidden'], 403);
+        // }
 
         $validator = Validator::make($request->all(), [
             'name'        => ['sometimes', 'string', 'max:255'],
