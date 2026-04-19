@@ -9,6 +9,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\DB;
 
 class ProductsController extends Controller
 {
@@ -100,7 +101,9 @@ class ProductsController extends Controller
             'description' => $product->description,
             'category'    => $product->category,
             'price'       => $product->price,
-            'waranty'     => $product->waranty,
+            'stock'       => $product->stock,
+            'status'      => $product->status,
+            'warranty'    => $product->warranty,
             'product_type'=> $product->product_type,
             'created_by'  => $product->created_by,
             'images'      => $product->images->map(fn ($img) => [
@@ -119,19 +122,27 @@ class ProductsController extends Controller
     /**
      * Create a product (seller only).
      */
+
     public function store(Request $request)
     {
         $user = Auth::user();
-        if (! $user) {
-            return response()->json(['status' => false, 'message' => 'Unauthorized'], 401);
-        }
-         if ($user->isseller !== true) {
-            return response()->json(['status' => false, 'message' => 'Only sellers can add products'], 403);
-        }
-        // if ($user->category !== 'seller') {
-        //     return response()->json(['status' => false, 'message' => 'Only sellers can add products'], 403);
-        // }
 
+        if (!$user) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorized'
+            ], 401);
+        }
+
+        // Ensure only verified sellers can add products
+        if (!$user->isseller || !$user->kyc_verified_at) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Only verified sellers can add products'
+            ], 403);
+        }
+
+        // Validate request
         $validator = Validator::make($request->all(), [
             'name'        => ['required', 'string', 'max:255'],
             'price'       => ['required', 'numeric', 'min:0'],
@@ -139,30 +150,29 @@ class ProductsController extends Controller
             'status'      => ['required', 'string', 'max:255'],
             'category'    => ['required', 'string', 'max:255'],
             'description' => ['required', 'string'],
-            'waranty'     => ['required', 'string', 'max:255'],
 
             // Optional fields
-            'discount'                  => ['nullable', 'string', 'max:255'],
-            'link'                      => ['nullable', 'string', 'max:255'],
-            'manufacturer'             => ['nullable', 'string', 'max:255'],
-            'ukca_mark'                => ['nullable', 'string', 'max:255'],
-            'model_number'             => ['nullable', 'string', 'max:255'],
-            'condition'                => ['nullable', 'string', 'max:255'],
-            'age_of_equipment'         => ['nullable', 'string', 'max:255'],
-            'last_serviced_date'       => ['nullable', 'date'],
-            'known_issues'             => ['nullable', 'boolean'],
-            'known_issues_details'     => ['nullable', 'string'],
-            'accessories'              => ['nullable', 'string'],
-            'pickup_available_date'    => ['nullable', 'date'],
-            'equipment_location'       => ['nullable', 'string', 'max:255'],
-            'shipping_cost_contribution'=> ['nullable', 'string', 'max:255'],
+            'discount'                   => ['nullable', 'string', 'max:255'],
+            'warranty'                   => ['nullable', 'string', 'max:255'],
+            'link'                       => ['nullable', 'string', 'max:255'],
+            'manufacturer'               => ['nullable', 'string', 'max:255'],
+            'ukca_mark'                  => ['nullable', 'string', 'max:255'],
+            'model_number'               => ['nullable', 'string', 'max:255'],
+            'condition'                  => ['nullable', 'string', 'max:255'],
+            'age_of_equipment'           => ['nullable', 'string', 'max:255'],
+            'last_serviced_date'         => ['nullable', 'date'],
+            'known_issues'               => ['nullable', 'boolean'],
+            'known_issues_details'       => ['nullable', 'string'],
+            'accessories'                => ['nullable', 'string'],
+            'pickup_available_date'      => ['nullable', 'date'],
+            'equipment_location'         => ['nullable', 'string', 'max:255'],
+            'shipping_cost_contribution' => ['nullable', 'string', 'max:255'],
 
-            // Photos
-            'images'                    => ['nullable', 'array'],
-            'images.*'                  => ['file', 'image', 'mimes:jpeg,jpg,png,gif,webp'],
-            // 'photos'                    => ['nullable', 'array'],
-            // 'photos.*'                  => ['file', 'image', 'mimes:jpeg,jpg,png,gif,webp'],
+            // Images
+            'images'   => ['nullable', 'array'],
+            'images.*' => ['file', 'image', 'mimes:jpeg,jpg,png,gif,webp'],
         ]);
+
         if ($validator->fails()) {
             return response()->json([
                 'success' => false,
@@ -170,26 +180,55 @@ class ProductsController extends Controller
                 'errors'  => $validator->errors(),
             ], 422);
         }
+
         $validated = $validator->validated();
 
-        $product = new Product();
-        $product->fill($validated);
-        $product->product_type = 'product';
-        $product->created_by   = $user->id;
-        $product->save();
+        DB::beginTransaction();
 
-        if ($request->hasFile('images')) {
-            foreach ($request->file('images') as $idx => $file) {
-                $path = $file->store('product_images', 'public');
-                ProductImage::create([
-                    'product_id' => $product->id,
-                    'image_url'  => $path,
-                    'sort_order' => $idx,
-                ]);
+        try {
+            // Create product
+            $product = new Product();
+            $product->fill($validated);
+            $product->product_type = 'product';
+            $product->created_by   = $user->id;
+            $product->save();
+
+            // Handle images safely (single or multiple)
+            if ($request->hasFile('images')) {
+                $files = $request->file('images');
+
+                if (!is_array($files)) {
+                    $files = [$files];
+                }
+
+                foreach ($files as $idx => $file) {
+                    $path = $file->store('product_images', 'public');
+
+                    ProductImage::create([
+                        'product_id' => $product->id,
+                        'image_url'  => $path,
+                        'sort_order' => $idx,
+                    ]);
+                }
             }
-        }
 
-        return $this->show($product->id);
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Product created successfully',
+                'data'    => $product
+            ], 201);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Product creation failed',
+                'error'   => $e->getMessage()
+            ], 500);
+        }
     }
 
     /**
@@ -198,20 +237,19 @@ class ProductsController extends Controller
     public function update(Request $request, $id)
     {
         $user = Auth::user();
+
         if (! $user) {
             return response()->json(['status' => false, 'message' => 'Unauthorized'], 401);
         }
 
-        $product = Product::where('uuid',$id)->first();
+        $product = Product::where('uuid', $id)->first();
         if (! $product) {
             return response()->json(['status' => false, 'message' => 'Product not found'], 404);
         }
-        if ($user->isseller !== true || $product->created_by !== $user->id) {
+
+        if (!$user->isseller || !$user->kyc_verified_at || $product->created_by !== $user->id) {
             return response()->json(['status' => false, 'message' => 'Forbidden'], 403);
         }
-        // if ($user->category !== 'seller' || $product->created_by !== $user->id) {
-        //     return response()->json(['status' => false, 'message' => 'Forbidden'], 403);
-        // }
 
         $validator = Validator::make($request->all(), [
             'name'        => ['sometimes', 'string', 'max:255'],
@@ -220,26 +258,29 @@ class ProductsController extends Controller
             'status'      => ['sometimes', 'string', 'max:255'],
             'category'    => ['sometimes', 'string', 'max:255'],
             'description' => ['sometimes', 'string'],
-            'waranty'     => ['sometimes', 'string', 'max:255'],
 
-            'discount'            => ['nullable', 'string', 'max:255'],
-            'link'                => ['nullable', 'string', 'max:255'],
-            'manufacturer'             => ['nullable', 'string', 'max:255'],
-            'ukca_mark'                => ['nullable', 'string', 'max:255'],
-            'model_number'             => ['nullable', 'string', 'max:255'],
-            'condition'                => ['nullable', 'string', 'max:255'],
-            'age_of_equipment'         => ['nullable', 'string', 'max:255'],
-            'last_serviced_date'       => ['nullable', 'date'],
-            'known_issues'             => ['nullable', 'boolean'],
-            'known_issues_details'     => ['nullable', 'string'],
-            'accessories'              => ['nullable', 'string'],
-            'pickup_available_date'    => ['nullable', 'date'],
-            'equipment_location'       => ['nullable', 'string', 'max:255'],
-            'shipping_cost_contribution'=> ['nullable', 'string', 'max:255'],
+            'warranty'                   => ['nullable', 'string', 'max:255'],
+            'discount'                   => ['nullable', 'string', 'max:255'],
+            'link'                       => ['nullable', 'string', 'max:255'],
+            'manufacturer'               => ['nullable', 'string', 'max:255'],
+            'ukca_mark'                  => ['nullable', 'string', 'max:255'],
+            'model_number'               => ['nullable', 'string', 'max:255'],
+            'condition'                  => ['nullable', 'string', 'max:255'],
+            'age_of_equipment'           => ['nullable', 'string', 'max:255'],
+            'last_serviced_date'         => ['nullable', 'date'],
+            'known_issues'               => ['nullable', 'boolean'],
+            'known_issues_details'       => ['nullable', 'string'],
+            'accessories'                => ['nullable', 'string'],
+            'pickup_available_date'      => ['nullable', 'date'],
+            'equipment_location'         => ['nullable', 'string', 'max:255'],
+            'shipping_cost_contribution' => ['nullable', 'string', 'max:255'],
 
-            'images'                    => ['nullable', 'array'],
-            'images.*'                  => ['file', 'image', 'mimes:jpeg,jpg,png,gif,webp'],
+            // Images
+            'images'   => ['nullable'],
+            'images.*' => ['file', 'image', 'mimes:jpeg,jpg,png,gif,webp'],
+
         ]);
+
         if ($validator->fails()) {
             return response()->json([
                 'success' => false,
@@ -247,15 +288,24 @@ class ProductsController extends Controller
                 'errors'  => $validator->errors(),
             ], 422);
         }
-        $validated = $validator->validated();
 
-        $product->fill($validated);
+        $validated = $validator->validated();
+        $productData = collect($validated)->except(['images'])->toArray();
+        $product->fill($productData);
         $product->save();
 
         if ($request->hasFile('images')) {
+            $files = $request->file('images');
+
+            if (! is_array($files)) {
+                $files = [$files];
+            }
+
             $currentCount = ProductImage::where('product_id', $product->id)->count();
-            foreach ($request->file('images') as $idx => $file) {
+
+            foreach ($files as $idx => $file) {
                 $path = $file->store('product_images', 'public');
+
                 ProductImage::create([
                     'product_id' => $product->id,
                     'image_url'  => $path,
@@ -281,7 +331,7 @@ class ProductsController extends Controller
         if (! $product) {
             return response()->json(['status' => false, 'message' => 'Product not found'], 404);
         }
-        if ($user->category !== 'seller' || $product->created_by !== $user->id) {
+        if (!$user->isseller || !$user->kyc_verified_at || $product->created_by !== $user->id) {
             return response()->json(['status' => false, 'message' => 'Forbidden'], 403);
         }
 
@@ -314,7 +364,7 @@ class ProductsController extends Controller
         }
 
         $product = Product::find($image->product_id);
-        if (! $product || $product->created_by !== $user->id || $user->category !== 'seller') {
+        if (! $product || $product->created_by !== $user->id || !$user->isseller || !$user->kyc_verified_at) {
             return response()->json(['status' => false, 'message' => 'Forbidden'], 403);
         }
 

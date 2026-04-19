@@ -202,7 +202,7 @@ Route::middleware('auth:sanctum')->prefix('v1')->group(function () {
     Route::get('/my-biddings', [ProductsController::class, 'myBiddings']);
     Route::get('/biddings/{bidId}', [ProductsController::class, 'showBid']);
 
-    Route::put('/products/{id}', [ProductsController::class, 'update']);
+    Route::match(['put', 'post'], '/products/{id}', [ProductsController::class, 'update']);
     Route::delete('/products/{id}', [ProductsController::class, 'destroy']);
     Route::delete('/products/images/{imageId}', [ProductsController::class, 'destroyImage']);
 

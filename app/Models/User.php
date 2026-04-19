@@ -30,7 +30,8 @@ class User extends Authenticatable
         'country',
         'facility_name',
         'medical_licence',
-        //'isSeller',
+        'isSeller',
+        'kyc_verified_at',
        
     ];
 
@@ -77,6 +78,8 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'isSeller' => 'boolean',
+            'kyc_verified_at' => 'datetime',
         ];
     }
 

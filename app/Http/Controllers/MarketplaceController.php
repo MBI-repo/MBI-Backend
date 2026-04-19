@@ -241,7 +241,12 @@ class MarketplaceController extends Controller
                     'message' => 'Submitted KYC data does not match user records'
                 ], 409);
             }
-
+            
+            $user->update([
+                'isSeller' => true,
+                'kyc_verified_at' => now(),
+            ]);
+            
             return response()->json([
                 'success' => true,
                 'message' => 'KYC data verified successfully'

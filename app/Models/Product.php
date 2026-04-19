@@ -22,7 +22,7 @@ class Product extends Model
         'category',
         'link',
         'description',
-        'waranty',
+        'warranty',
         'ukca_mark',
         'model_number',
         'condition',

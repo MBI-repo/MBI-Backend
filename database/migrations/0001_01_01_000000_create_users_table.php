@@ -22,6 +22,8 @@ return new class extends Migration
             $table->string('category')->nullable();
             $table->string('specialisation')->nullable();
             $table->string('institution')->nullable();
+            $table->boolean('isSeller')->default(false)->nullable();
+            $table->timestamp('kyc_verified_at')->nullable();
             $table->string('license_number')->unique()->nullable();
             $table->enum('approval_status', ['pending', 'approved', 'rejected'])->default('pending');
             $table->enum('status', ['active', 'inactive'])->default('active');
