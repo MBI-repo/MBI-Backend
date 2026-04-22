@@ -18,11 +18,19 @@ class ProductsController extends Controller
      */
     public function index()
     {
-        $products = Product::with('images')->orderByDesc('id')->where('product_type','product')->get();
+         $products = Product::with('images')
+        ->where('product_type', 'product')
+        ->where('state', 'show')
+        ->where('stock', '>', 0)
+        ->orderByDesc('id')
+        ->get();
+        //$products = Product::with('images')->orderByDesc('id')->where('product_type','product')->get();
         $baseUrl = 'https://api.mybridgeinternational.org/mybridge-backend-files/storage/app/public/';
         $productUrl = 'https://portal.mybridgeinternational.org/mbi-portal-files/public/';
-     
-        $data = $products->map(function (Product $p) use ($baseUrl,$productUrl) {   
+        
+
+
+        $data = $products->map(function (Product $p) use ($baseUrl, $productUrl) {   
             return [
                 'id'          => $p->id,
                 'uuid'        => $p->uuid,
@@ -30,7 +38,8 @@ class ProductsController extends Controller
                 'description' => $p->description,
                 'category'    => $p->category,
                 'price'       => $p->price,
-                'waranty'     => $p->waranty,
+                'warranty'    => $p->warranty,
+                'state'       => $p->state,
                 'product_type'=> $p->product_type,
                 'created_by'  => $p->created_by,
                 'images'      => $p->images->map(fn ($img) => [
@@ -58,7 +67,7 @@ class ProductsController extends Controller
                 'description' => $p->description,
                 'category'    => $p->category,
                 'price'       => $p->price,
-                'waranty'     => $p->waranty,
+                'warranty'    => $p->warranty,
                 'product_type'=> $p->product_type,
                 'created_by'  => $p->created_by,
                 'images'      => $p->images->map(fn ($img) => [
@@ -80,9 +89,13 @@ class ProductsController extends Controller
      */
     public function show($id)
     {
+        $query = Product::with('images')
+        ->where('state', 'show')
+        ->where('stock', '>', 0);
+
         $product = is_numeric($id)
-            ? Product::with('images')->find($id)
-            : Product::with('images')->where('uuid', $id)->first();
+        ? (clone $query)->where('id', $id)->first()
+        : (clone $query)->where('uuid', $id)->first();
 
         if (! $product) {
             return response()->json([
@@ -102,6 +115,7 @@ class ProductsController extends Controller
             'category'    => $product->category,
             'price'       => $product->price,
             'stock'       => $product->stock,
+            'state'       => $product->state,
             'status'      => $product->status,
             'warranty'    => $product->warranty,
             'product_type'=> $product->product_type,
@@ -135,7 +149,7 @@ class ProductsController extends Controller
         }
 
         // Ensure only verified sellers can add products
-        if (!$user->isseller || !$user->kyc_verified_at) {
+        if (!$user->isSeller || !$user->kyc_verified_at ) {
             return response()->json([
                 'success' => false,
                 'message' => 'Only verified sellers can add products'
@@ -247,7 +261,7 @@ class ProductsController extends Controller
             return response()->json(['status' => false, 'message' => 'Product not found'], 404);
         }
 
-        if (!$user->isseller || !$user->kyc_verified_at || $product->created_by !== $user->id) {
+        if (!$user->isSeller || !$user->kyc_verified_at || $product->created_by !== $user->id) {
             return response()->json(['status' => false, 'message' => 'Forbidden'], 403);
         }
 
@@ -314,8 +328,161 @@ class ProductsController extends Controller
             }
         }
 
-        return $this->show($product->id);
+        // return $this->show($product->id);
+        $baseUrl = 'https://api.mybridgeinternational.org/mybridge-backend-files/storage/app/public/';
+        $productUrl = 'https://portal.mybridgeinternational.org/mbi-portal-files/public/';
+        $donatedUrl = 'https://admin.mybridgeinternational.org/mbi-admin-files/public/';
+
+        $product->load('images');
+
+        return response()->json([
+            'status' => true,
+            'message' => 'Product updated successfully',
+            'data' => [
+                'id'          => $product->id,
+                'uuid'        => $product->uuid,
+                'name'        => $product->name,
+                'description' => $product->description,
+                'category'    => $product->category,
+                'price'       => $product->price,
+                'stock'       => $product->stock,
+                'state'       => $product->state,
+                'status'      => $product->status,
+                'warranty'    => $product->warranty,
+                'product_type'=> $product->product_type,
+                'created_by'  => $product->created_by,
+                'images'      => $product->images->map(fn ($img) => [
+                    'id'        => $img->id,
+                    'image_url' => $product->product_type === 'donation'
+                        ? $donatedUrl . $img->image_url
+                        : (Storage::disk('public')->exists($img->image_url)
+                            ? $baseUrl . $img->image_url
+                            : $productUrl . $img->image_url),
+                    'sort_order'=> $img->sort_order,
+                ]),
+            ],
+        ]);
+
     }
+    /**
+     * get all product for a seller owner only.
+     */
+
+    public function userProducts($userId)
+    {
+        $user = Auth::user();
+
+        // 1. Unauthorized
+        if (! $user) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorized'
+            ], 401);
+        }
+
+        // 2. Forbidden (seller + KYC + ownership)
+        if (! $user->isSeller || ! $user->kyc_verified_at || $user->id != $userId) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Forbidden'
+            ], 403);
+        }
+
+        try {
+            $baseUrl = 'https://api.mybridgeinternational.org/mybridge-backend-files/storage/app/public/';
+            $productUrl = 'https://portal.mybridgeinternational.org/mbi-portal-files/public/';
+
+
+            $products = Product::with('images')
+                ->where('created_by', $user->id) // enforce ownership
+                ->where('product_type', 'product')
+                ->orderByDesc('id')
+                ->paginate(10)
+                ->through(function ($product) use ($baseUrl, $productUrl) {
+
+                    return [
+                        'id' => $product->id,
+                        'uuid' => $product->uuid,
+                        'name' => $product->name,
+                        'description' => $product->description,
+                        'price' => $product->price,
+                        'stock' => $product->stock,
+                        'state' => $product->state,
+                        'status' => $product->status,
+                        'category' => $product->category,
+                        'created_at' => $product->created_at?->toDateTimeString(),
+                        // images
+                        'images' => $product->images->map(function ($img) use ($baseUrl, $productUrl) {
+                            return [
+                                'id'  => $img->id,
+                                'image_url' => $img->image_url
+                                    ? (Storage::disk('public')->exists($img->image_url)
+                                        ? $baseUrl . $img->image_url
+                                        : $productUrl . $img->image_url)
+                                    : null,
+                            ];
+                        }),
+                        'image_count' => $product->images->count(),
+                    ];
+                });
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Products retrieved successfully',
+                'data'    => $products
+            ]);
+
+        } catch (\Exception $e) {
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to retrieve products',
+                'error'   => $e->getMessage()
+            ], 500);
+        }
+    }
+    /**
+     * draft product for a seller owner only.
+     */
+    public function draftProduct($uuid)
+    {
+        $user = Auth::user();
+
+        if (! $user) {
+            return response()->json(['status' => false, 'message' => 'Unauthorized'], 401);
+        }
+
+        $product = Product::where('uuid', $uuid)->first();
+
+        if (! $product) {
+            return response()->json(['status' => false, 'message' => 'Product not found'], 404);
+        }
+
+        if (! $user->isSeller || ! $user->kyc_verified_at || $product->created_by !== $user->id) {
+            return response()->json(['status' => false, 'message' => 'Forbidden'], 403);
+        }
+
+        if ($product->product_type !== 'product') {
+            return response()->json(['status' => false, 'message' => 'Only products can be drafted'], 422);
+        }
+
+        if ($product->state === 'draft') {
+            return response()->json(['status' => true, 'message' => 'Product already drafted']);
+        }
+
+        $product->state = 'draft';
+        $product->save();
+
+        return response()->json([
+            'status' => true,
+            'message' => 'Product moved to draft',
+            'data' => [
+                'uuid' => $product->uuid,
+                'state' => $product->state,
+            ],
+        ]);
+    }
+
 
     /**
      * Delete a product and its images (seller owner only).
@@ -331,7 +498,7 @@ class ProductsController extends Controller
         if (! $product) {
             return response()->json(['status' => false, 'message' => 'Product not found'], 404);
         }
-        if (!$user->isseller || !$user->kyc_verified_at || $product->created_by !== $user->id) {
+        if (!$user->isSeller || !$user->kyc_verified_at || $product->created_by !== $user->id) {
             return response()->json(['status' => false, 'message' => 'Forbidden'], 403);
         }
 
@@ -364,7 +531,7 @@ class ProductsController extends Controller
         }
 
         $product = Product::find($image->product_id);
-        if (! $product || $product->created_by !== $user->id || !$user->isseller || !$user->kyc_verified_at) {
+        if (! $product || $product->created_by !== $user->id || !$user->isSeller || !$user->kyc_verified_at) {
             return response()->json(['status' => false, 'message' => 'Forbidden'], 403);
         }
 

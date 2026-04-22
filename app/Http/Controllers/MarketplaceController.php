@@ -189,21 +189,20 @@ class MarketplaceController extends Controller
     public function verifyKyc(Request $request)
     {
         try {
-
             $user = Auth::guard('sanctum')->user();
 
-            if (!$user) {
+            if (! $user) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Unauthorized'
+                    'message' => 'Unauthorized',
                 ], 401);
             }
 
             $validator = Validator::make($request->all(), [
-                'institution'   => ['required', 'string', 'max:255'],
-                'phone'         => ['required', 'string', 'max:255'],
-                'country'       => ['required', 'string', 'max:255'],
-                'license_number'=> ['required', 'string', 'max:255'],
+                'institution'    => ['required', 'string', 'max:255'],
+                'phone'          => ['required', 'string', 'max:255'],
+                'country'        => ['required', 'string', 'max:255'],
+                'license_number' => ['required', 'string', 'max:255'],
             ]);
 
             if ($validator->fails()) {
@@ -216,49 +215,68 @@ class MarketplaceController extends Controller
 
             $data = $validator->validated();
 
-            /*
-            If license_number is null, save it first
-            */
-            if (is_null($user->license_number)) {
-                $user->update([
-                    'license_number' => $data['license_number']
-                ]);
-
-                // refresh user instance
-                $user->refresh();
+            if (! $user->institution || ! $user->phone || ! $user->country) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Profile is incomplete. Please update your institution, phone, and country first.',
+                ], 409);
             }
 
-            /*
-            Verify KYC details
-            */
             if (
                 $user->institution !== $data['institution'] ||
                 $user->phone !== $data['phone'] ||
-                $user->license_number !== $data['license_number']
+                $user->country !== $data['country']
             ) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Submitted KYC data does not match user records'
+                    'message' => 'Submitted KYC data does not match user records',
                 ], 409);
             }
-            
-            $user->update([
+
+            if ($user->category !== 'Manufacturing, Supply & Logistics') {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Only sellers in the Manufacturing category can verify KYC',
+                ], 403);
+            }
+
+            if ($user->license_number && $user->license_number !== $data['license_number']) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Submitted license number does not match user records',
+                ], 409);
+            }
+
+            $updateData = [
                 'isSeller' => true,
                 'kyc_verified_at' => now(),
-            ]);
-            
+            ];
+
+            if (! $user->license_number) {
+                $updateData['license_number'] = $data['license_number'];
+            }
+
+            $user->update($updateData);
+
+            $user->refresh();
+
             return response()->json([
                 'success' => true,
-                'message' => 'KYC data verified successfully'
+                'message' => 'KYC data verified successfully',
+                'data' => [
+                    'license_number' => $user->license_number,
+                    'isSeller' => $user->isSeller,
+                    'kyc_verified_at' => $user->kyc_verified_at,
+                ],
             ]);
-
-        } catch (\Exception $e) {
-
+        } catch (\Throwable $e) {
             return response()->json([
                 'success' => false,
                 'message' => 'Something went wrong',
-                'error'   => $e->getMessage()
+                'error'   => $e->getMessage(),
             ], 500);
         }
     }
+
+
 }

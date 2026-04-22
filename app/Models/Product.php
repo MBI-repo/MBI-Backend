@@ -18,6 +18,7 @@ class Product extends Model
         'discount',
         'stock',
         'status',
+        'state',
         'manufacturer',
         'category',
         'link',

@@ -126,6 +126,7 @@ Route::prefix('v1')->group(function () {
     Route::get('/products', [ProductsController::class, 'index']);
     Route::get('/products/donation', [ProductsController::class, 'donationProduct']);
     Route::get('/products/{id}', [ProductsController::class, 'show']);
+    
 });
 
 
@@ -196,6 +197,8 @@ Route::middleware('auth:sanctum')->prefix('v1')->group(function () {
 
     // Product management (seller only for write)
     Route::post('/products', [ProductsController::class, 'store']);
+    Route::get('/products/my-products/{userId}', [ProductsController::class, 'userProducts']);
+    Route::post('/products/draft-products/{Id}', [ProductsController::class, 'draftProduct']);
 
     // Bidding
     Route::post('/products/bid/{id}', [ProductsController::class, 'submitBid']);
