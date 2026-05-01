@@ -28,12 +28,13 @@ class Event extends Model
         'venue',
         'price',
         'tags',
+        'reminder_sent_at',
     ];
 
     protected $casts = [
         'is_online' => 'boolean',
         'visibility' => 'boolean',
-      
+       'reminder_sent_at' => 'datetime',
         'tags' => 'array',
     ];
 

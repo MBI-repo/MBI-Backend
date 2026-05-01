@@ -20,23 +20,33 @@ class NotificationController extends Controller
                 ], 401);
             }
             $notifications = Notification::with('sender')->where('receiver_id', $user->uuid)->latest()->limit(50)->get();
-            $data = $notifications->map(function ($item) {
+             $data = $notifications->map(function ($item) {
                 return [
-                    'id'     => $item->id,
-                    'name'   => $item->sender? $item->sender->full_name: 'System',
+                    'id' => $item->id,
+                    'title' => $item->title,
+                    'name' => $item->sender ? $item->sender->full_name : 'System',
                     'message' => $item->message,
-                    'time'   => $this->formatTime($item->created_at),
+                    'time' => $this->formatTime($item->created_at),
+                    'created_at' => $item->created_at,
                     'unread' => ! $item->is_read,
                     'avatar' => $this->resolveUserImageUrl(
                         optional($item->sender)->image
                     ),
-                    'type'   => $item->type,
+                    'type' => $item->type,
+                    'reference_id' => $item->reference_id,
+                    'reference_type' => $item->reference_type,
                 ];
             });
+
+            $unreadCount = Notification::where('receiver_id', $user->uuid)
+                ->where('is_read', false)
+                ->count();
+
             return response()->json([
-                'status'  => true,
+                'status' => true,
                 'message' => 'Notifications fetched successfully',
-                'data'    => $data,
+                'unread_count' => $unreadCount,
+                'data' => $data,
             ], 200);
         } catch (\Throwable $e) {
             return response()->json([
