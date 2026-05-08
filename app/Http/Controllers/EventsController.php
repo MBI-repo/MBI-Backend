@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Event;
 use App\Models\EventSubscription;
+use App\Models\Notification;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
@@ -140,7 +141,7 @@ class EventsController extends Controller
             'title' => ['required', 'string', 'max:255'],
             'category' => ['nullable', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
-            'image' => ['nullable'],
+            'image' => ['nullable', 'image', 'mimes:jpeg,jpg,png,gif,webp', 'max:5120'],
             'is_online' => ['nullable', 'boolean'],
             'meeting_link' => ['nullable', 'url'],
             'status' => ['nullable', 'in:draft,published,cancelled,upcoming,completed'],
@@ -229,6 +230,18 @@ class EventsController extends Controller
             $event->image_url = '/uploads/events/' . $fileName;
             $event->save();
         }
+        if ($user) {
+            Notification::create([
+                'receiver_id' => $user->uuid,
+                'sender_id' => $user->uuid,
+                'title' => 'Event created',
+                'message' => "{$event->title} has been created successfully.",
+                'type' => 'event_created',
+                'is_read' => false,
+                'reference_id' => $event->id,
+                'reference_type' => 'event',
+            ]);
+        }
 
         return response()->json([
             'success' => true,
@@ -246,7 +259,7 @@ class EventsController extends Controller
             'title' => ['nullable', 'string', 'max:255'],
             'category' => ['nullable', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
-            'image' => ['nullable'],
+            'image' => ['nullable', 'image', 'mimes:jpeg,jpg,png,gif,webp', 'max:5120'],
             'is_online' => ['nullable', 'boolean'],
             'meeting_link' => ['nullable', 'url'],
             'status' => ['nullable', 'in:draft,published,cancelled,upcoming,completed'],
@@ -261,23 +274,26 @@ class EventsController extends Controller
             'tags' => ['nullable', 'array'],
         ]);
 
-        $validator->after(function ($v) use ($request) {
-            $sd = $request->input('start_date');
-            $st = $request->input('start_time');
-            $ed = $request->input('end_date');
-            $et = $request->input('end_time');
+        $validator->after(function ($v) use ($request, $event) {
+            $sd = $request->input('start_date', $event->start_date);
+            $st = $request->input('start_time', $event->start_time);
+            $ed = $request->input('end_date', $event->end_date);
+            $et = $request->input('end_time', $event->end_time);
+
             if ($sd && $st && $ed) {
                 try {
                     $start = Carbon::parse($sd . ' ' . $st);
                     $end = Carbon::parse($ed . ' ' . ($et ?? '00:00'));
+
                     if ($end->lt($start)) {
                         $v->errors()->add('end_date', 'End datetime must be after or equal to start datetime.');
                     }
                 } catch (\Exception $e) {
-                    // ignore
+                    // Base validation rules handle invalid dates/times.
                 }
             }
         });
+
 
         if ($validator->fails()) {
             return response()->json([
@@ -293,15 +309,16 @@ class EventsController extends Controller
             $event->slug = $this->generateUniqueSlug($data['title']);
         }
 
-        // Merge date/time to datetimes if provided
-        $startAt = $event->start_at;
-        $endAt = $event->end_at;
-        if (!empty($data['start_date']) && !empty($data['start_time'])) {
-            $startAt = Carbon::parse($data['start_date'] . ' ' . $data['start_time']);
-        }
-        if (!empty($data['end_date'])) {
-            $endAt = Carbon::parse($data['end_date'] . ' ' . ($data['end_time'] ?? '00:00'));
-        }
+        // The events table currently uses start_date/start_time and end_date/end_time,
+        // not start_at/end_at, so this should stay disabled unless the schema changes.
+        // $startAt = $event->start_at;
+        // $endAt = $event->end_at;
+        // if (!empty($data['start_date']) && !empty($data['start_time'])) {
+        //     $startAt = Carbon::parse($data['start_date'] . ' ' . $data['start_time']);
+        // }
+        // if (!empty($data['end_date'])) {
+        //     $endAt = Carbon::parse($data['end_date'] . ' ' . ($data['end_time'] ?? '00:00'));
+        // }
 
         $event->fill([
             'title' => $data['title'] ?? $event->title,
@@ -311,13 +328,16 @@ class EventsController extends Controller
             'meeting_link' => $data['meeting_link'] ?? $event->meeting_link,
             'status' => $data['status'] ?? $event->status,
             'visibility' => $data['visibility'] ?? $event->visibility,
-            'start_at' => $startAt,
-            'end_at' => $endAt,
+            'start_date' => $data['start_date'] ?? $event->start_date,
+            'start_time' => $data['start_time'] ?? $event->start_time,
+            'end_date' => $data['end_date'] ?? $event->end_date,
+            'end_time' => $data['end_time'] ?? $event->end_time,
             'timezone' => $data['timezone'] ?? $event->timezone,
             'venue' => $data['venue'] ?? $event->venue,
             'price' => $data['price'] ?? $event->price,
             'tags' => $data['tags'] ?? $event->tags,
         ]);
+
 
         // Optional image upload
         if ($request->hasFile('image')) {
@@ -335,14 +355,58 @@ class EventsController extends Controller
 
         $event->save();
 
+        $importantFields = [
+            'title',
+            'start_date',
+            'start_time',
+            'end_date',
+            'end_time',
+            'venue',
+            'meeting_link',
+            'status',
+        ];
+
+        $changedImportantFields = collect($importantFields)
+            ->filter(fn ($field) => $event->wasChanged($field));
+
+        if ($changedImportantFields->isNotEmpty()) {
+            $event->load(['subscriptions.user', 'organizer']);
+
+            $receivers = collect();
+
+            if ($event->organizer) {
+                $receivers->push($event->organizer);
+            }
+
+            foreach ($event->subscriptions as $subscription) {
+                if ($subscription->user) {
+                    $receivers->push($subscription->user);
+                }
+            }
+
+            $receivers = $receivers->unique('id');
+
+            foreach ($receivers as $receiver) {
+                Notification::create([
+                    'receiver_id' => $receiver->uuid,
+                    'sender_id' => $user?->uuid,
+                    'title' => 'Event updated',
+                    'message' => "{$event->title} has been updated.",
+                    'type' => 'event_updated',
+                    'is_read' => false,
+                    'reference_id' => $event->id,
+                    'reference_type' => 'event',
+                ]);
+            }
+        }
+
         return response()->json([
             'success' => true,
             'message' => 'Event updated successfully',
             'event' => $event
         ]);
+
     }
-
-
 
     public function destroy($id)
     {
@@ -361,9 +425,9 @@ class EventsController extends Controller
         $base = Str::slug($title);
         $slug = $base;
         $i = 1;
-        while (Event::where('slug', $slug)->exists()) {
-            $slug = $base . '-' . $i;
-            $i++;
+        while (Event::withTrashed()->where('slug', $slug)->exists()) {
+        $slug = $base . '-' . $i;
+        $i++;
         }
         return $slug;
     }
