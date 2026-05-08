@@ -47,6 +47,18 @@ class SendEventReminderNotifications extends Command
             $receivers = $receivers->unique('id');
 
             foreach ($receivers as $user) {
+
+                // Avoid duplicate reminder notifications for this event/user.
+                $alreadyNotified = Notification::where('receiver_id', $user->uuid)
+                    ->where('type', 'event_reminder')
+                    ->where('reference_id', $event->id)
+                    ->where('reference_type', 'event')
+                    ->exists();
+
+                if ($alreadyNotified) {
+                    continue;
+                }
+
                 Notification::create([
                     'receiver_id' => $user->uuid,
                     'sender_id' => $event->organizer?->uuid,

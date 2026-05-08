@@ -23,6 +23,11 @@ use App\Models\WaitingList;
 use Illuminate\Http\Request;
 use Illuminate\Broadcasting\BroadcastController;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Notification;
+
 
 
 
@@ -64,6 +69,20 @@ Route::middleware('auth:sanctum')->prefix('v1/notification')->as('notification.'
     Route::patch('/read-all', [NotificationController::class, 'markAllAsRead'])->name('notification_readAll');
     Route::delete('/delete/{id}', [NotificationController::class, 'destroy'])->name('notification_delete');
 });
+
+//this is for the cron job to send event reminders one day before events
+    Route::middleware('auth:sanctum')->prefix('v1')->group(function () {
+        Route::post('/events/send-reminders', function () {
+            Artisan::call('events:send-reminders');
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Event reminders processed successfully.',
+                'output' => Artisan::output(),
+            ]);
+        });
+    });
+
 
 //Route::middleware('auth:sanctum')->prefix('notification')->as('notification.')->group(function () {
 // Route::get('/view-notificationsettings/show', [NotificationController::class, 'viewSettings'])->name('settings_show');
