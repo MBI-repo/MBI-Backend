@@ -7,6 +7,7 @@ use App\Models\Event;
 use App\Models\Message;
 use App\Models\Connection;
 use App\Models\User;
+use App\Models\Notification;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Auth;
@@ -70,6 +71,17 @@ class AuthController extends Controller
             $user->image = '/storage/profile_photos/' . $filename;
             $user->save();
         }
+
+            Notification::create([
+                'receiver_id' => $user->uuid,
+                'sender_id' => $user->uuid,
+                'title' => 'Successful Registration',
+                'message' => "You have successfully Register as {$user->full_name} on MBI Platform.",
+                'type' => 'registration',
+                'is_read' => false,
+                'reference_id' => $user->id,
+                'reference_type' => 'user',
+            ]);
 
         $token = $user->createToken('auth_token')->plainTextToken;
 

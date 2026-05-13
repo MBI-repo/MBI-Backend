@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Connection;
+use App\Models\Notification;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -16,7 +17,7 @@ class ReceivedController extends Controller
 
             $connections = Connection::where('receiver_id', $authUser->id)
                 ->where('status', 'pending')
-                ->with('sender:id,full_name,email,specialisation,institution,category,image')
+                ->with('sender:id,uuid,full_name,email,specialisation,institution,category,image')
                 ->orderBy('created_at', 'desc')
                 ->get()
                 ->map(function ($connection) {
@@ -52,10 +53,11 @@ class ReceivedController extends Controller
     }
 
 
-    public function accept($connection_id)
+    public function accept(int $connection_id)
     {
         try {
             $authUser = Auth::user();
+            // $sender =[];
 
             $connection = Connection::where('id', $connection_id)
                 ->where('receiver_id', $authUser->id)
@@ -69,11 +71,27 @@ class ReceivedController extends Controller
                 ], 404);
             }
 
-            DB::transaction(function () use ($connection) {
-                $connection->update(['status' => 'accepted']);
-            });
+            $sender = $connection->sender()
+                    ->select('id', 'uuid', 'full_name', 'email', 'specialisation', 'institution', 'category', 'image')
+                    ->first();
 
-            $sender = $connection->sender()->select('id', 'full_name', 'email', 'specialisation', 'institution', 'category', 'image')->first();
+                DB::transaction(function () use ($connection, $authUser, $sender) {
+                    $connection->update(['status' => 'accepted']);
+
+                    if ($sender) {
+                        Notification::create([
+                            'receiver_id' => $sender->uuid,
+                            'sender_id' => $authUser->uuid,
+                            'title' => 'Connection accepted',
+                            'message' => "{$authUser->full_name} accepted your connection request.",
+                            'type' => 'connection',
+                            'is_read' => false,
+                            'reference_id' => $connection->id,
+                            'reference_type' => 'connection_accepted',
+                        ]);
+                    }
+                });
+
 
             return response()->json([
                 'status' => true,
@@ -92,7 +110,7 @@ class ReceivedController extends Controller
         }
     }
 
-    public function reject($connection_id)
+    public function reject(int $connection_id)
     {
         try {
             $authUser = Auth::user();

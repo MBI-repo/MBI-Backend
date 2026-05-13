@@ -46,6 +46,8 @@ Route::group(['prefix' => 'v1'], function () {
 Route::group(['prefix' => 'v1/user'], function () {
     Route::get('/', [AuthController::class, 'user'])->name('fetchUser');
     Route::post('/', [AuthController::class, 'update'])->middleware('auth:sanctum')->name('updateUser');
+
+
 });
 
 Route::middleware('auth:sanctum')->prefix('v1/settings')->as('settings.')->group(function () {
@@ -70,8 +72,9 @@ Route::middleware('auth:sanctum')->prefix('v1/notification')->as('notification.'
     Route::delete('/delete/{id}', [NotificationController::class, 'destroy'])->name('notification_delete');
 });
 
-//this is for the cron job to send event reminders one day before events
+
     Route::middleware('auth:sanctum')->prefix('v1')->group(function () {
+        //this is for the cron job to send event reminders one day before events
         Route::post('/events/send-reminders', function () {
             Artisan::call('events:send-reminders');
 
@@ -81,6 +84,7 @@ Route::middleware('auth:sanctum')->prefix('v1/notification')->as('notification.'
                 'output' => Artisan::output(),
             ]);
         });
+        Route::get('/profile/completion', [ProfileController::class, 'profileCompletion'])->name('profile_completion');
     });
 
 

@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\User;
 use App\Models\Connection;
+use App\Models\Notification;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -163,18 +164,32 @@ class DiscoverController extends Controller
             }
 
             // Create new pending invitation inside a transaction
-            DB::transaction(function () use ($senderId, $receiverId) {
-                Connection::create([
+           $connection = DB::transaction(function () use ($senderId, $receiverId, $authUser, $target) {
+                $connection = Connection::create([
                     'sender_id'   => $senderId,
                     'receiver_id' => $receiverId,
                     'status'      => 'pending',
                 ]);
-            });
 
+                Notification::create([
+                    'receiver_id' => $target->uuid,
+                    'sender_id' => $authUser->uuid,
+                    'title' => 'New connection request',
+                    'message' => "{$authUser->full_name} sent you a connection request.",
+                    'type' => 'connection',
+                    'is_read' => false,
+                    'reference_id' => $connection->id,
+                    'reference_type' => 'connection_request',
+                ]);
+
+                return $connection;
+            });
             return response()->json([
                 'status' => true,
                 'message' => 'Connection request sent.',
-                'data' => ['connection_status' => 'pending_sent']
+                'data' => [
+                    'connection_id' => $connection->id,
+                    'connection_status' => 'pending_sent']
             ], 201);
 
         } catch (\Exception $e) {
