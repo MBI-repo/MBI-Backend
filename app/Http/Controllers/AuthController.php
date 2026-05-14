@@ -225,10 +225,19 @@ class AuthController extends Controller
     {
         try {
             $user = $request->user();
+
+            if (! $user) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Unauthenticated',
+                ], 401);
+            }
+
             $validator = Validator::make($request->all(), [
                 'full_name' => 'sometimes|string|max:255',
                 'category' => 'sometimes|string|max:255',
                 'specialisation' => 'sometimes|string|max:255',
+                //'phone' => 'sometimes|string|max:20|unique:users,phone,' . ($user ? $user->id : 'NULL'),
                 'institution' => 'sometimes|string|max:255',
                 'license_number' => 'sometimes|string|max:255|unique:users,license_number,' . ($user ? $user->id : 'NULL'),
                 'image' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:5120',

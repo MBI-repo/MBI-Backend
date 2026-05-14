@@ -562,21 +562,22 @@ class ProfileController extends Controller
                 'completed' => ! empty($profile?->experiences),
                 'missing' => empty($profile?->experiences) ? ['experiences'] : [],
             ],
+            
             [
                 'step' => 5,
                 'key' => 'certifications_and_licenses',
                 'title' => 'Certification and Licenses',
                 'completed' => ! empty($profile?->certifications)
-                    || ! empty($user->license_number)
-                    || ! empty($user->medical_licence),
+                    && ! empty($user->license_number)
+                    && ! empty($user->medical_licence),
                 'missing' => $this->missingFields([
                     'certifications' => $profile?->certifications,
                     'license_number' => $user->license_number,
                     'medical_licence' => $user->medical_licence,
                 ]),
             ],
-        ];
 
+        ];
         if ($isSeller) {
             $steps[] = [
                 'step' => 6,

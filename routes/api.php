@@ -43,12 +43,12 @@ Route::group(['prefix' => 'v1'], function () {
     Route::post('/logout', [AuthController::class, 'destroy'])->name('logout');
 });
 
-Route::group(['prefix' => 'v1/user'], function () {
-    Route::get('/', [AuthController::class, 'user'])->name('fetchUser');
-    Route::post('/', [AuthController::class, 'update'])->middleware('auth:sanctum')->name('updateUser');
-
-
+Route::middleware('auth:sanctum')->prefix('v1/')->group(function () {
+    Route::get('/fetch-user', [AuthController::class, 'user'])->name('fetchUser');
+    Route::post('/update-user', [AuthController::class, 'update'])->name('updateUser');
+    Route::get('/profile/completion', [ProfileController::class, 'profileCompletion'])->name('profile_completion');
 });
+
 
 Route::middleware('auth:sanctum')->prefix('v1/settings')->as('settings.')->group(function () {
     Route::get('/account-info/show', [ProfileController::class, 'showAccount'])->name('account_show');
@@ -84,7 +84,7 @@ Route::middleware('auth:sanctum')->prefix('v1/notification')->as('notification.'
                 'output' => Artisan::output(),
             ]);
         });
-        Route::get('/profile/completion', [ProfileController::class, 'profileCompletion'])->name('profile_completion');
+       
     });
 
 

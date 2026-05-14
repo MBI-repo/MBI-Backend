@@ -215,12 +215,28 @@ class MarketplaceController extends Controller
 
             $data = $validator->validated();
 
-            if (! $user->institution || ! $user->phone || ! $user->country) {
+            $missingFields = [];
+
+            if (empty($user->institution)) {
+                $missingFields[] = 'institution';
+            }
+
+            if (empty($user->phone)) {
+                $missingFields[] = 'phone';
+            }
+
+            if (empty($user->country)) {
+                $missingFields[] = 'country';
+            }
+
+            if (! empty($missingFields)) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Profile is incomplete. Please update your institution, phone, and country first.',
+                    'message' => 'Profile is incomplete. Please update your ' . implode(', ', $missingFields) . ' first.',
+                    'missing_fields' => $missingFields,
                 ], 409);
             }
+
 
             if (
                 $user->institution !== $data['institution'] ||
@@ -256,9 +272,9 @@ class MarketplaceController extends Controller
                 $updateData['license_number'] = $data['license_number'];
             }
 
-            $user->update($updateData);
+            User::where('id', $user->id)->update($updateData);
 
-            $user->refresh();
+            $user = User::find($user->id);
 
             return response()->json([
                 'success' => true,
