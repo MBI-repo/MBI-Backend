@@ -31,7 +31,7 @@ return [
         'http://127.0.0.1:3001',
     ],
 
-    'allowed_origins' => ['*'],
+    // 'allowed_origins' => ['*'],
 
     'allowed_origins_patterns' => [],
 
