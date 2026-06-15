@@ -43,4 +43,9 @@ class MessageRead implements ShouldBroadcastNow
             'readAt' => $this->readAt,
         ];
     }
+
+    public function broadcastAs(): string
+    {
+        return 'message.read';
+    }
 }

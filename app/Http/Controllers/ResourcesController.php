@@ -45,6 +45,15 @@ class ResourcesController extends Controller
             });
         }
 
+        if ($request->query('saved')) {
+            $user = Auth::guard('sanctum')->user();
+            if ($user) {
+                $query->whereHas('savedBy', function ($q) use ($user) {
+                    $q->where('user_id', $user->id);
+                });
+            }
+        }
+
         $perPage = (int) $request->query('per_page', 20);
         $journals = $query->paginate($perPage);
 
@@ -110,6 +119,15 @@ class ResourcesController extends Controller
                     ->orWhere('authors', 'like', '%' . $search . '%')
                     ->orWhere('abstract', 'like', '%' . $search . '%');
             });
+        }
+
+        if ($request->query('saved')) {
+            $user = Auth::guard('sanctum')->user();
+            if ($user) {
+                $query->whereHas('savedBy', function ($q) use ($user) {
+                    $q->where('user_id', $user->id);
+                });
+            }
         }
 
         $perPage = (int) $request->query('per_page', 20);
@@ -786,6 +804,15 @@ class ResourcesController extends Controller
             });
         }
 
+        if ($request->query('saved')) {
+            $user = Auth::guard('sanctum')->user();
+            if ($user) {
+                $query->whereHas('savedBy', function ($q) use ($user) {
+                    $q->where('user_id', $user->id);
+                });
+            }
+        }
+
         $perPage = (int) $request->query('per_page', 20);
         $rds = $query->paginate($perPage);
 
@@ -1137,10 +1164,81 @@ class ResourcesController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'R&D record deleted successfully',
+            'message' => 'R&D resource deleted successfully',
             'rdId' => (string) $rdId,
             'status' => 'deleted',
         ]);
+    }
+
+    public function getSavedIds(Request $request)
+    {
+        $user = Auth::guard('sanctum')->user();
+        if (!$user) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
+        }
+
+        $saves = \App\Models\SavedResource::where('user_id', $user->id)->get();
+
+        $journals = $saves->where('savable_type', Journals::class)->pluck('savable_id')->values();
+        $articles = $saves->where('savable_type', Articles::class)->pluck('savable_id')->values();
+        $rds = $saves->where('savable_type', ResearchAndDevelopment::class)->pluck('savable_id')->values();
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'journals' => $journals,
+                'articles' => $articles,
+                'rds' => $rds,
+            ]
+        ]);
+    }
+
+    public function toggleSave(Request $request)
+    {
+        $user = Auth::guard('sanctum')->user();
+        if (!$user) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
+        }
+
+        $validator = Validator::make($request->all(), [
+            'id' => ['required'],
+            'type' => ['required', 'in:journal,article,rd'],
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['success' => false, 'errors' => $validator->errors()], 422);
+        }
+
+        $type = $request->type;
+        $id = $request->id;
+
+        $modelClass = match($type) {
+            'journal' => Journals::class,
+            'article' => Articles::class,
+            'rd' => ResearchAndDevelopment::class,
+        };
+
+        $model = $modelClass::find($id);
+        if (!$model) {
+            return response()->json(['success' => false, 'message' => 'Resource not found'], 404);
+        }
+
+        $existing = \App\Models\SavedResource::where('user_id', $user->id)
+            ->where('savable_id', $id)
+            ->where('savable_type', $modelClass)
+            ->first();
+
+        if ($existing) {
+            $existing->delete();
+            return response()->json(['success' => true, 'message' => 'Resource unsaved', 'status' => 'unsaved']);
+        } else {
+            \App\Models\SavedResource::create([
+                'user_id' => $user->id,
+                'savable_id' => $id,
+                'savable_type' => $modelClass,
+            ]);
+            return response()->json(['success' => true, 'message' => 'Resource saved', 'status' => 'saved']);
+        }
     }
 
     private function findRD($id): ?ResearchAndDevelopment

@@ -35,5 +35,13 @@ class Journals extends Model
     {
         return $this->belongsTo(User::class);
     }
+
+    /**
+     * Get all of the resource's saves.
+     */
+    public function savedBy()
+    {
+        return $this->morphMany(SavedResource::class, 'savable');
+    }
 }
 

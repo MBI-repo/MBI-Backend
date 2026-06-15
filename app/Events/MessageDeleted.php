@@ -37,4 +37,9 @@ class MessageDeleted implements ShouldBroadcastNow
             'messageUuid' => $this->messageUuid,
         ];
     }
+
+    public function broadcastAs(): string
+    {
+        return 'message.deleted';
+    }
 }
