@@ -72,16 +72,16 @@ class AuthController extends Controller
             $user->save();
         }
 
-            Notification::create([
-                'receiver_id' => $user->uuid,
-                'sender_id' => $user->uuid,
-                'title' => 'Successful Registration',
-                'message' => "You have successfully Register as {$user->full_name} on MBI Platform.",
-                'type' => 'registration',
-                'is_read' => false,
-                'reference_id' => $user->id,
-                'reference_type' => 'user',
-            ]);
+        Notification::create([
+            'receiver_id' => $user->uuid,
+            'sender_id' => $user->uuid,
+            'title' => 'Successful Registration',
+            'message' => "You have successfully Register as {$user->full_name} on MBI Platform.",
+            'type' => 'registration',
+            'is_read' => false,
+            'reference_id' => $user->id,
+            'reference_type' => 'user',
+        ]);
 
         $token = $user->createToken('auth_token')->plainTextToken;
 
@@ -197,7 +197,7 @@ class AuthController extends Controller
             $networkCount = Connection::accepted()
                 ->where(function ($q) use ($user) {
                     $q->where('sender_id', $user->id)
-                      ->orWhere('receiver_id', $user->id);
+                        ->orWhere('receiver_id', $user->id);
                 })
                 ->count();
 
@@ -205,7 +205,7 @@ class AuthController extends Controller
             $user->setAttribute('network_count', $networkCount);
             $user->setAttribute('event_count', $eventCount);
 
-             $user->isSeller = $user->category === 'seller';
+            $user->isSeller = (bool) $user->isSeller || $user->category === 'seller';
 
             if (!empty($user->image)) {
                 $user->setAttribute('image', $this->toAbsoluteUrl($user->image));

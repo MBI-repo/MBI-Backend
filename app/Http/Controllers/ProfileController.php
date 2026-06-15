@@ -145,7 +145,6 @@ class ProfileController extends Controller
                     'image' =>  $base_url . $user->image,
                 ],
             ], 200);
-
         } catch (\Exception $e) {
             return response()->json([
                 'status'  => false,
@@ -198,7 +197,7 @@ class ProfileController extends Controller
             $user->image = '/storage/' . $relativePath;
             $user->save();
 
-            
+
 
             Notification::create([
                 'receiver_id' => $user->uuid,
@@ -340,7 +339,6 @@ class ProfileController extends Controller
                     'awards'           => $profile?->awards ?? [],
                 ],
             ], 200);
-
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
@@ -438,22 +436,21 @@ class ProfileController extends Controller
                 $verb = count($updatedSections) === 1 ? 'has' : 'have';
 
                 Notification::create([
-                'receiver_id' => $user->uuid,
-                'sender_id' => $user->uuid,
-                'title' => 'Professional profile updated',
-                'message' => 'Your ' . implode(', ', $updatedSections) . " {$verb} been updated successfully.",
-                'type' => 'update',
-                'is_read' => false,
-                'reference_id' => $profile->id,
-                'reference_type' => 'professional_profile',
-            ]);
-        }
+                    'receiver_id' => $user->uuid,
+                    'sender_id' => $user->uuid,
+                    'title' => 'Professional profile updated',
+                    'message' => 'Your ' . implode(', ', $updatedSections) . " {$verb} been updated successfully.",
+                    'type' => 'update',
+                    'is_read' => false,
+                    'reference_id' => $profile->id,
+                    'reference_type' => 'professional_profile',
+                ]);
+            }
 
             return response()->json([
                 'success' => true,
                 'message' => 'Professional profile updated successfully.',
             ], 200);
-
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
@@ -481,7 +478,6 @@ class ProfileController extends Controller
                 'success' => true,
                 'message' => 'User account deleted successfully.',
             ], 200);
-
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
@@ -562,7 +558,7 @@ class ProfileController extends Controller
                 'completed' => ! empty($profile?->experiences),
                 'missing' => empty($profile?->experiences) ? ['experiences'] : [],
             ],
-            
+
             [
                 'step' => 5,
                 'key' => 'certifications_and_licenses',
@@ -638,10 +634,9 @@ class ProfileController extends Controller
     private function missingFields(array $fields): array
     {
         return collect($fields)
-            ->filter(fn ($value) => empty($value))
+            ->filter(fn($value) => empty($value))
             ->keys()
             ->values()
             ->all();
     }
-
 }
