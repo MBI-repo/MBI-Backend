@@ -72,7 +72,7 @@ class ProductsController extends Controller
                 'created_by'  => $p->created_by,
                 'images'      => $p->images->map(fn ($img) => [
                     'id'        => $img->id,
-                    'image_url' => $baseUrl . $img->image_url,
+                    'image_url' => rtrim($baseUrl, '/') . '/' . ltrim($img->image_url, '/'),
                     'sort_order'=> $img->sort_order,
                 ]),
             ];
@@ -90,8 +90,13 @@ class ProductsController extends Controller
     public function show($id)
     {
         $query = Product::with('images')
-        ->where('state', 'show')
-        ->where('stock', '>', 0);
+            ->where(function($q) {
+                $q->where('product_type', 'donation')
+                  ->orWhere(function($sub) {
+                      $sub->where('state', 'show')
+                          ->where('stock', '>', 0);
+                  });
+            });
 
         $product = is_numeric($id)
         ? (clone $query)->where('id', $id)->first()
@@ -122,7 +127,11 @@ class ProductsController extends Controller
             'created_by'  => $product->created_by,
             'images'      => $product->images->map(fn ($img) => [
                 'id'        => $img->id,
-                'image_url' => $product->product_type === 'donation' ? $donatedUrl . $img->image_url : (Storage::disk('public')->exists($img->image_url) ? $baseUrl . $img->image_url : $productUrl . $img->image_url),
+                'image_url' => $product->product_type === 'donation' 
+                    ? rtrim($donatedUrl, '/') . '/' . ltrim($img->image_url, '/') 
+                    : (Storage::disk('public')->exists($img->image_url) 
+                        ? rtrim($baseUrl, '/') . '/' . ltrim($img->image_url, '/') 
+                        : rtrim($productUrl, '/') . '/' . ltrim($img->image_url, '/')),
                 'sort_order'=> $img->sort_order,
             ]),
         ];
@@ -354,10 +363,10 @@ class ProductsController extends Controller
                 'images'      => $product->images->map(fn ($img) => [
                     'id'        => $img->id,
                     'image_url' => $product->product_type === 'donation'
-                        ? $donatedUrl . $img->image_url
+                        ? rtrim($donatedUrl, '/') . '/' . ltrim($img->image_url, '/')
                         : (Storage::disk('public')->exists($img->image_url)
-                            ? $baseUrl . $img->image_url
-                            : $productUrl . $img->image_url),
+                            ? rtrim($baseUrl, '/') . '/' . ltrim($img->image_url, '/')
+                            : rtrim($productUrl, '/') . '/' . ltrim($img->image_url, '/')),
                     'sort_order'=> $img->sort_order,
                 ]),
             ],
@@ -417,8 +426,8 @@ class ProductsController extends Controller
                                 'id'  => $img->id,
                                 'image_url' => $img->image_url
                                     ? (Storage::disk('public')->exists($img->image_url)
-                                        ? $baseUrl . $img->image_url
-                                        : $productUrl . $img->image_url)
+                                        ? rtrim($baseUrl, '/') . '/' . ltrim($img->image_url, '/')
+                                        : rtrim($productUrl, '/') . '/' . ltrim($img->image_url, '/'))
                                     : null,
                             ];
                         }),
