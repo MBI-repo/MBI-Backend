@@ -18,19 +18,19 @@ class ProductsController extends Controller
      */
     public function index()
     {
-         $products = Product::with('images')
-        ->where('product_type', 'product')
-        ->where('state', 'show')
-        ->where('stock', '>', 0)
-        ->orderByDesc('id')
-        ->get();
+        $products = Product::with('images')
+            ->where('product_type', 'product')
+            ->where('state', 'show')
+            ->where('stock', '>', 0)
+            ->orderByDesc('id')
+            ->get();
         //$products = Product::with('images')->orderByDesc('id')->where('product_type','product')->get();
         $baseUrl = 'https://api.mybridgeinternational.org/mybridge-backend-files/storage/app/public/';
         $productUrl = 'https://portal.mybridgeinternational.org/mbi-portal-files/public/';
-        
 
 
-        $data = $products->map(function (Product $p) use ($baseUrl, $productUrl) {   
+
+        $data = $products->map(function (Product $p) use ($baseUrl, $productUrl) {
             return [
                 'id'          => $p->id,
                 'uuid'        => $p->uuid,
@@ -40,12 +40,12 @@ class ProductsController extends Controller
                 'price'       => $p->price,
                 'warranty'    => $p->warranty,
                 'state'       => $p->state,
-                'product_type'=> $p->product_type,
+                'product_type' => $p->product_type,
                 'created_by'  => $p->created_by,
-                'images'      => $p->images->map(fn ($img) => [
+                'images'      => $p->images->map(fn($img) => [
                     'id'        => $img->id,
                     'image_url' => Storage::disk('public')->exists($img->image_url) ? $baseUrl . $img->image_url : $productUrl . $img->image_url,
-                    'sort_order'=> $img->sort_order,
+                    'sort_order' => $img->sort_order,
                 ]),
             ];
         });
@@ -57,7 +57,7 @@ class ProductsController extends Controller
     }
     public function donationProduct()
     {
-        $products = Product::with('images')->orderByDesc('id')->where('product_type','donation')->get();
+        $products = Product::with('images')->orderByDesc('id')->where('product_type', 'donation')->get();
         $baseUrl = 'https://admin.mybridgeinternational.org/mbi-admin-files/public/';
         $data = $products->map(function (Product $p) use ($baseUrl) {
             return [
@@ -68,12 +68,12 @@ class ProductsController extends Controller
                 'category'    => $p->category,
                 'price'       => $p->price,
                 'warranty'    => $p->warranty,
-                'product_type'=> $p->product_type,
+                'product_type' => $p->product_type,
                 'created_by'  => $p->created_by,
-                'images'      => $p->images->map(fn ($img) => [
+                'images'      => $p->images->map(fn($img) => [
                     'id'        => $img->id,
                     'image_url' => rtrim($baseUrl, '/') . '/' . ltrim($img->image_url, '/'),
-                    'sort_order'=> $img->sort_order,
+                    'sort_order' => $img->sort_order,
                 ]),
             ];
         });
@@ -90,25 +90,25 @@ class ProductsController extends Controller
     public function show($id)
     {
         $query = Product::with('images')
-            ->where(function($q) {
+            ->where(function ($q) {
                 $q->where('product_type', 'donation')
-                  ->orWhere(function($sub) {
-                      $sub->where('state', 'show')
-                          ->where('stock', '>', 0);
-                  });
+                    ->orWhere(function ($sub) {
+                        $sub->where('state', 'show')
+                            ->where('stock', '>', 0);
+                    });
             });
 
         $product = is_numeric($id)
-        ? (clone $query)->where('id', $id)->first()
-        : (clone $query)->where('uuid', $id)->first();
+            ? (clone $query)->where('id', $id)->first()
+            : (clone $query)->where('uuid', $id)->first();
 
         if (! $product) {
             return response()->json([
                 'status' => false,
-                'message'=> 'Product not found',
+                'message' => 'Product not found',
             ], 404);
         }
-
+        $pel_url = 'https://testinggit.com';
         $baseUrl = 'https://api.mybridgeinternational.org/mybridge-backend-files/storage/app/public/';
         $productUrl = 'https://portal.mybridgeinternational.org/mbi-portal-files/public/';
         $donatedUrl = 'https://admin.mybridgeinternational.org/mbi-admin-files/public/';
@@ -123,16 +123,16 @@ class ProductsController extends Controller
             'state'       => $product->state,
             'status'      => $product->status,
             'warranty'    => $product->warranty,
-            'product_type'=> $product->product_type,
+            'product_type' => $product->product_type,
             'created_by'  => $product->created_by,
-            'images'      => $product->images->map(fn ($img) => [
+            'images'      => $product->images->map(fn($img) => [
                 'id'        => $img->id,
-                'image_url' => $product->product_type === 'donation' 
-                    ? rtrim($donatedUrl, '/') . '/' . ltrim($img->image_url, '/') 
-                    : (Storage::disk('public')->exists($img->image_url) 
-                        ? rtrim($baseUrl, '/') . '/' . ltrim($img->image_url, '/') 
+                'image_url' => $product->product_type === 'donation'
+                    ? rtrim($donatedUrl, '/') . '/' . ltrim($img->image_url, '/')
+                    : (Storage::disk('public')->exists($img->image_url)
+                        ? rtrim($baseUrl, '/') . '/' . ltrim($img->image_url, '/')
                         : rtrim($productUrl, '/') . '/' . ltrim($img->image_url, '/')),
-                'sort_order'=> $img->sort_order,
+                'sort_order' => $img->sort_order,
             ]),
         ];
 
@@ -158,7 +158,7 @@ class ProductsController extends Controller
         }
 
         // Ensure only verified sellers can add products
-        if (!$user->isSeller || !$user->kyc_verified_at ) {
+        if (!$user->isSeller || !$user->kyc_verified_at) {
             return response()->json([
                 'success' => false,
                 'message' => 'Only verified sellers can add products'
@@ -242,7 +242,6 @@ class ProductsController extends Controller
                 'message' => 'Product created successfully',
                 'data'    => $product
             ], 201);
-
         } catch (\Exception $e) {
             DB::rollBack();
 
@@ -358,20 +357,19 @@ class ProductsController extends Controller
                 'state'       => $product->state,
                 'status'      => $product->status,
                 'warranty'    => $product->warranty,
-                'product_type'=> $product->product_type,
+                'product_type' => $product->product_type,
                 'created_by'  => $product->created_by,
-                'images'      => $product->images->map(fn ($img) => [
+                'images'      => $product->images->map(fn($img) => [
                     'id'        => $img->id,
                     'image_url' => $product->product_type === 'donation'
                         ? rtrim($donatedUrl, '/') . '/' . ltrim($img->image_url, '/')
                         : (Storage::disk('public')->exists($img->image_url)
                             ? rtrim($baseUrl, '/') . '/' . ltrim($img->image_url, '/')
                             : rtrim($productUrl, '/') . '/' . ltrim($img->image_url, '/')),
-                    'sort_order'=> $img->sort_order,
+                    'sort_order' => $img->sort_order,
                 ]),
             ],
         ]);
-
     }
     /**
      * get all product for a seller owner only.
@@ -440,7 +438,6 @@ class ProductsController extends Controller
                 'message' => 'Products retrieved successfully',
                 'data'    => $products
             ]);
-
         } catch (\Exception $e) {
 
             return response()->json([
@@ -503,7 +500,7 @@ class ProductsController extends Controller
             return response()->json(['status' => false, 'message' => 'Unauthorized'], 401);
         }
 
-        $product = Product::with('images')->where('uuid',$id)->first();
+        $product = Product::with('images')->where('uuid', $id)->first();
         if (! $product) {
             return response()->json(['status' => false, 'message' => 'Product not found'], 404);
         }
@@ -562,7 +559,7 @@ class ProductsController extends Controller
             return response()->json(['status' => false, 'message' => 'Unauthorized'], 401);
         }
 
-        $product = Product::where('uuid',$productId)->first();
+        $product = Product::where('uuid', $productId)->first();
         if (!$product) {
             return response()->json(['status' => false, 'message' => 'Product not found'], 404);
         }
@@ -587,7 +584,7 @@ class ProductsController extends Controller
             'budget' => ['nullable', 'string', 'max:255'],
             'statement_of_need' => ['required', 'string'],
             'intended_use' => ['required', 'string'],
-            'agreed' => ['required','boolean'],
+            'agreed' => ['required', 'boolean'],
         ]);
 
         if ($validator->fails()) {
@@ -669,7 +666,7 @@ class ProductsController extends Controller
         $bid = ProductBidding::find($bidId);
 
         if (!$bid) {
-             return response()->json(['status' => false, 'message' => 'Bid not found'], 404);
+            return response()->json(['status' => false, 'message' => 'Bid not found'], 404);
         }
 
         if ((int) $bid->user_id !== (int) $user->id) {
