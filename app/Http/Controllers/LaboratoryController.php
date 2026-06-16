@@ -27,7 +27,7 @@ class LaboratoryController extends Controller
 
         // If patient, show only their orders. If there's a provider role, they might see more.
         // For now, let's assume patients see their own orders.
-        $orders = LabOrder::with(['patient', 'category', 'labCenter'])
+        $orders = LabOrder::with(['patient', 'facility', 'category', 'labCenter'])
             ->when($user->category === 'patient', function ($query) use ($user) {
                 return $query->where('patient_id', $user->id);
             })
@@ -37,6 +37,24 @@ class LaboratoryController extends Controller
         return response()->json([
             'status' => true,
             'data' => $orders
+        ]);
+    }
+
+    public function patients()
+    {
+        $patients = \App\Models\User::where('category', 'patient')->get(['id', 'full_name', 'email']);
+        return response()->json([
+            'status' => true,
+            'data' => $patients
+        ]);
+    }
+
+    public function facilities()
+    {
+        $facilities = \App\Models\LabFacility::with('testCategories')->get();
+        return response()->json([
+            'status' => true,
+            'data' => $facilities
         ]);
     }
 
@@ -52,6 +70,7 @@ class LaboratoryController extends Controller
 
         $validator = Validator::make($request->all(), [
             'patient_id' => 'required|exists:users,id',
+            'lab_facility_id' => 'required|exists:lab_facilities,id',
             'test_category_id' => 'required|exists:test_categories,id',
             'specific_test_name' => 'required|string|max:255',
             'priority' => 'required|in:Routine,Urgent,Emergency',
@@ -59,6 +78,11 @@ class LaboratoryController extends Controller
             'provisional_diagnosis' => 'nullable|string',
             'clinical_notes' => 'nullable|string',
             'attachment' => 'nullable|file|mimes:pdf,doc,docx,jpg,jpeg,png|max:10240',
+            'frequency' => 'nullable|string',
+            'duration' => 'nullable|string',
+            'start_date' => 'nullable|string',
+            'end_date' => 'nullable|string',
+            'justification' => 'nullable|string',
         ]);
 
         if ($validator->fails()) {
@@ -71,26 +95,76 @@ class LaboratoryController extends Controller
 
         $validated = $validator->validated();
 
-        // Specific Validation: similar test ordered recently (e.g., within 24 hours)
+        // 1. Duplicate check: similar test ordered recently (e.g., within 24 hours)
         $timeframe = Carbon::now()->subHours(24);
         $similarTest = LabOrder::where('patient_id', $validated['patient_id'])
             ->where('specific_test_name', $validated['specific_test_name'])
             ->where('created_at', '>=', $timeframe)
             ->first();
 
-        if ($similarTest && !$request->has('confirm_duplicate')) {
+        if ($similarTest && !$request->boolean('confirm_duplicate')) {
             return response()->json([
                 'status' => false,
                 'duplicate_warning' => true,
                 'message' => 'A similar test was ordered for this patient within the defined timeframe. Review before proceeding.',
-                'previous_order' => $similarTest
+                'previous_orders' => [
+                    [
+                        'testName' => $similarTest->specific_test_name,
+                        'date' => $similarTest->created_at->format('d M Y'),
+                        'relativeTime' => $similarTest->created_at->diffForHumans(),
+                        'orderId' => $similarTest->order_id,
+                        'status' => $similarTest->status
+                    ]
+                ]
             ], 409); // Conflict
+        }
+
+        // 2. Contraindication check: based on diagnostic keyword
+        $hasContraindication = false;
+        $contraindicatedCondition = null;
+
+        $diagnosis = strtolower($validated['provisional_diagnosis'] ?? '');
+        $testName = strtolower($validated['specific_test_name'] ?? '');
+        if (str_contains($diagnosis, 'kidney') || str_contains($diagnosis, 'ckd') || str_contains($testName, 'contrast') || str_contains($testName, 'mri')) {
+            $hasContraindication = true;
+            $contraindicatedCondition = "Chronic Kidney Disease — Stage 4";
+        }
+
+        if ($hasContraindication && !$request->boolean('confirm_contraindication')) {
+            return response()->json([
+                'status' => false,
+                'contraindication_warning' => true,
+                'condition' => $contraindicatedCondition,
+                'message' => "This test may be contraindicated due to: {$contraindicatedCondition}."
+            ], 422);
         }
 
         // Handle attachment
         if ($request->hasFile('attachment')) {
             $path = $request->file('attachment')->store('lab_orders/attachments', 'public');
             $validated['attachment_path'] = $path;
+        }
+
+        // Cancel the previous duplicate order if confirm_duplicate is true
+        if ($request->boolean('confirm_duplicate')) {
+            $timeframe = Carbon::now()->subHours(24);
+            $similarTest = LabOrder::where('patient_id', $validated['patient_id'])
+                ->where('specific_test_name', $validated['specific_test_name'])
+                ->where('created_at', '>=', $timeframe)
+                ->first();
+
+            if ($similarTest) {
+                $similarTest->update([
+                    'status' => 'Cancelled'
+                ]);
+            }
+
+            $validated['override_justification'] = $validated['justification'] ?? null;
+        }
+
+        // Save override justification if confirm_contraindication is true
+        if ($request->boolean('confirm_contraindication')) {
+            $validated['override_justification'] = $validated['justification'] ?? null;
         }
 
         // Generate unique order ID
@@ -102,7 +176,7 @@ class LaboratoryController extends Controller
         return response()->json([
             'status' => true,
             'message' => 'Lab order created successfully',
-            'data' => $order->load(['patient', 'category', 'labCenter'])
+            'data' => $order->load(['patient', 'facility', 'category', 'labCenter'])
         ], 201);
     }
 
@@ -111,7 +185,14 @@ class LaboratoryController extends Controller
      */
     public function show($id)
     {
-        $order = LabOrder::with(['patient', 'category', 'labCenter'])->where('order_id', $id)->first();
+        $order = LabOrder::with([
+            'patient',
+            'facility',
+            'category',
+            'labCenter',
+            'result.parameters',
+            'result.equipment'
+        ])->where('order_id', $id)->first();
 
         if (!$order) {
             return response()->json(['status' => false, 'message' => 'Lab order not found'], 404);
@@ -347,6 +428,33 @@ class LaboratoryController extends Controller
         return response()->json([
             'status' => true,
             'data' => $result
+        ]);
+    }
+
+    /**
+     * Update a lab result (e.g. doctor's comments).
+     */
+    public function resultsUpdate(Request $request, $id)
+    {
+        $result = LabResult::find($id);
+        if (!$result) {
+            return response()->json(['status' => false, 'message' => 'Lab result not found'], 404);
+        }
+
+        $validator = Validator::make($request->all(), [
+            'doctor_comment' => 'nullable|string',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['status' => false, 'errors' => $validator->errors()], 422);
+        }
+
+        $result->update($validator->validated());
+
+        return response()->json([
+            'status' => true,
+            'message' => 'Lab result updated successfully',
+            'data' => $result->load(['order', 'equipment', 'parameters'])
         ]);
     }
 }

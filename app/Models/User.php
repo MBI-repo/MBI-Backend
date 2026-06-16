@@ -32,7 +32,9 @@ class User extends Authenticatable
         'medical_licence',
         'isSeller',
         'kyc_verified_at',
-       
+        'gender',
+        'dob',
+        'city',
     ];
 
     public function sentConnections()

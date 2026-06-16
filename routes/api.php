@@ -236,6 +236,8 @@ Route::middleware('auth:sanctum')->prefix('v1')->group(function () {
 
     // Laboratory
     Route::prefix('laboratory')->group(function () {
+        Route::get('/patients', [LaboratoryController::class, 'patients']);
+        Route::get('/facilities', [LaboratoryController::class, 'facilities']);
         Route::get('/orders', [LaboratoryController::class, 'index']);
         Route::post('/orders', [LaboratoryController::class, 'store']);
         Route::get('/orders/{id}', [LaboratoryController::class, 'show']);
@@ -253,5 +255,6 @@ Route::middleware('auth:sanctum')->prefix('v1')->group(function () {
         Route::get('/results', [LaboratoryController::class, 'resultsIndex']);
         Route::post('/results', [LaboratoryController::class, 'resultsStore']);
         Route::get('/results/{id}', [LaboratoryController::class, 'resultsShow']);
+        Route::put('/results/{id}', [LaboratoryController::class, 'resultsUpdate']);
     });
 });

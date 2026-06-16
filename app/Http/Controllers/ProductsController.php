@@ -108,7 +108,6 @@ class ProductsController extends Controller
                 'message' => 'Product not found',
             ], 404);
         }
-        $pel_url = 'https://testinggit.com';
         $baseUrl = 'https://api.mybridgeinternational.org/mybridge-backend-files/storage/app/public/';
         $productUrl = 'https://portal.mybridgeinternational.org/mbi-portal-files/public/';
         $donatedUrl = 'https://admin.mybridgeinternational.org/mbi-admin-files/public/';
