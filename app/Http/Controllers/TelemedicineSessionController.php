@@ -425,9 +425,10 @@ class TelemedicineSessionController extends Controller
 
         $validator = Validator::make($request->all(), [
             'type' => 'required|in:audio,video',
-            'action' => 'required|in:started,accepted,declined,ended',
+            'action' => 'required|in:started,accepted,declined,ended,offer,answer,candidate',
             'sender' => 'required|in:patient,doctor',
             'duration' => 'nullable|string',
+            'payload' => 'nullable|array',
         ]);
 
         if ($validator->fails()) {

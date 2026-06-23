@@ -15,6 +15,18 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->api(prepend: [
             // \Laravel\Sanctum\Http\Middleware\EnsureFrontendRequestsAreStateful::class,
         ]);
+
+        $middleware->trimStrings(except: [
+            function ($request) {
+                return $request->is('*sessions/*/call/signal');
+            }
+        ]);
+
+        $middleware->convertEmptyStringsToNull(except: [
+            function ($request) {
+                return $request->is('*sessions/*/call/signal');
+            }
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //
