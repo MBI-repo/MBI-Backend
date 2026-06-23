@@ -23,3 +23,13 @@ Broadcast::channel('inbox.{userKey}', function ($user, $userKey) {
     return (is_numeric($userKey) && (int)$user->id === (int)$userKey)
         || (!is_numeric($userKey) && (string)$user->uuid === (string)$userKey);
 });
+
+// Authorize subscription to private telemedicine session channels by UUID
+Broadcast::channel('session.{sessionUuid}', function ($user, $sessionUuid) {
+    return \App\Models\TelemedicineSession::where('uuid', $sessionUuid)
+        ->where(function ($query) use ($user) {
+            $query->where('patient_id', $user->id)
+                  ->orWhere('doctor_id', $user->id);
+        })
+        ->exists();
+});

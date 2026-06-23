@@ -28,7 +28,7 @@ class LaboratoryController extends Controller
         // If patient, show only their orders. If there's a provider role, they might see more.
         // For now, let's assume patients see their own orders.
         $orders = LabOrder::with(['patient', 'facility', 'category', 'labCenter'])
-            ->when($user->category === 'patient', function ($query) use ($user) {
+            ->when($user->user_type === 'patient' || $user->category === 'patient', function ($query) use ($user) {
                 return $query->where('patient_id', $user->id);
             })
             ->orderBy('created_at', 'desc')
@@ -180,11 +180,9 @@ class LaboratoryController extends Controller
         ], 201);
     }
 
-    /**
-     * Show a specific lab order.
-     */
     public function show($id)
     {
+        $user = Auth::user();
         $order = LabOrder::with([
             'patient',
             'facility',
@@ -196,6 +194,11 @@ class LaboratoryController extends Controller
 
         if (!$order) {
             return response()->json(['status' => false, 'message' => 'Lab order not found'], 404);
+        }
+
+        // Security check: If authenticated user is a patient, they can only view their own orders
+        if ($user && ($user->user_type === 'patient' || $user->category === 'patient') && $order->patient_id !== $user->id) {
+            return response()->json(['status' => false, 'message' => 'Forbidden'], 403);
         }
 
         return response()->json([
@@ -455,6 +458,61 @@ class LaboratoryController extends Controller
             'status' => true,
             'message' => 'Lab result updated successfully',
             'data' => $result->load(['order', 'equipment', 'parameters'])
+        ]);
+    }
+
+    /**
+     * Get dashboard stats for the authenticated patient.
+     */
+    public function patientDashboardStats()
+    {
+        $user = Auth::user();
+        if (!$user) {
+            return response()->json(['status' => false, 'message' => 'Unauthorized'], 401);
+        }
+
+        // Verify patient role
+        if ($user->user_type !== 'patient' && $user->category !== 'patient') {
+            return response()->json(['status' => false, 'message' => 'Forbidden'], 403);
+        }
+
+        // Completed Tests count: count of lab orders where status is 'Completed'
+        $completedTestsCount = LabOrder::where('patient_id', $user->id)
+            ->where('status', 'Completed')
+            ->count();
+
+        // Pending Orders count: count of lab orders where status is 'Requested' or 'Processing'
+        $pendingOrdersCount = LabOrder::where('patient_id', $user->id)
+            ->whereIn('status', ['Requested', 'Processing'])
+            ->count();
+
+        // Critical Alerts count: count of lab orders with priority 'Emergency' OR with a critical result overall flag
+        $criticalAlertsCount = LabOrder::where('patient_id', $user->id)
+            ->where(function ($query) {
+                $query->where('priority', 'Emergency')
+                    ->orWhereHas('result', function ($q) {
+                        $q->where('overall_flag', 'Critical');
+                    });
+            })
+            ->count();
+
+        // Get latest 5 orders for the patient
+        $latestOrders = LabOrder::with(['patient', 'facility', 'category', 'labCenter'])
+            ->where('patient_id', $user->id)
+            ->orderBy('created_at', 'desc')
+            ->limit(5)
+            ->get();
+
+        return response()->json([
+            'status' => true,
+            'data' => [
+                'stats' => [
+                    'completed_tests' => $completedTestsCount,
+                    'pending_orders' => $pendingOrdersCount,
+                    'critical_alerts' => $criticalAlertsCount,
+                ],
+                'latest_orders' => $latestOrders
+            ]
         ]);
     }
 }

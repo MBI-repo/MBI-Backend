@@ -26,7 +26,6 @@ class User extends Authenticatable
         'institution',
         'license_number',
         'approval_status',
-        'status',
         'country',
         'facility_name',
         'medical_licence',
@@ -35,6 +34,8 @@ class User extends Authenticatable
         'gender',
         'dob',
         'city',
+        'state',
+        'user_type',
     ];
 
     public function sentConnections()

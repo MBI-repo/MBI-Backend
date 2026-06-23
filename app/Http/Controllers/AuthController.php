@@ -453,4 +453,146 @@ class AuthController extends Controller
             ], 500);
         }
     }
+
+    /**
+     * Register a new patient
+     */
+    public function patientRegister(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'firstName' => 'required|string|max:255',
+            'middleName' => 'nullable|string|max:255',
+            'lastName' => 'required|string|max:255',
+            'email' => 'required|string|email|max:255|unique:users,email',
+            'phoneNumber' => 'required|string|max:20|unique:users,phone',
+            'gender' => 'required|string|max:255',
+            'dateOfBirth' => 'required|date',
+            'city' => 'required|string|max:255',
+            'state' => 'required|string|max:255',
+            'country' => 'required|string|max:255',
+            'password' => 'required|string|min:8',
+            'confirmPassword' => 'required|string|same:password',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation errors',
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        $fullName = trim($request->firstName . ' ' . ($request->middleName ? $request->middleName . ' ' : '') . $request->lastName);
+
+        $user = User::create([
+            'full_name' => $fullName,
+            'email' => $request->email,
+            'phone' => $request->phoneNumber,
+            'password' => Hash::make($request->password),
+            'gender' => $request->gender,
+            'dob' => $request->dateOfBirth,
+            'city' => $request->city,
+            'state' => $request->state,
+            'country' => $request->country,
+            'user_type' => 'patient',
+            'category' => 'patient',
+            'status' => 'active',
+            'approval_status' => 'approved',
+        ]);
+
+        Notification::create([
+            'receiver_id' => $user->uuid,
+            'sender_id' => $user->uuid,
+            'title' => 'Successful Registration',
+            'message' => "You have successfully registered as {$user->full_name} on MBI Platform.",
+            'type' => 'registration',
+            'is_read' => false,
+            'reference_id' => $user->id,
+            'reference_type' => 'user',
+        ]);
+
+        $token = $user->createToken('auth_token')->plainTextToken;
+
+        if (!empty($user->image)) {
+            $user->setAttribute('image', $this->toAbsoluteUrl($user->image));
+        }
+
+        // Send welcome email (non-blocking for response)
+        try {
+            Mail::to($user->email)->send(new WelcomeMail($user));
+        } catch (\Throwable $mailException) {
+            // Swallow mail exceptions to avoid blocking registration
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'User registered successfully',
+            'data' => [
+                'user' => $user,
+                'access_token' => $token,
+                'token_type' => 'Bearer',
+            ]
+        ], 201);
+    }
+
+    /**
+     * Login patient and create token
+     */
+    public function patientLogin(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'identifier' => 'required|string',
+            'password' => 'required|string',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation errors',
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        $user = User::where('email', $request->identifier)
+            ->orWhere('uuid', $request->identifier)
+            ->orWhere('id', $request->identifier)
+            ->first();
+
+        if (!$user || !Hash::check($request->password, $user->password)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Invalid credentials'
+            ], 401);
+        }
+
+        if ($user->status !== 'active') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Account is inactive'
+            ], 403);
+        }
+
+        if ($user->user_type !== 'patient' && $user->user_type !== 'user') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Access denied. Only patients and regular users can login here.'
+            ], 403);
+        }
+
+        if (!empty($user->image)) {
+            $user->setAttribute('image', $this->toAbsoluteUrl($user->image));
+        }
+
+        $token = $user->createToken('auth_token')->plainTextToken;
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Login successful',
+            'data' => [
+                'user' => $user,
+                'access_token' => $token,
+                'token_type' => 'Bearer',
+            ]
+        ]);
+    }
 }

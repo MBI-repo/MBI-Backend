@@ -19,6 +19,7 @@ use App\Http\Controllers\WaitingListController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ResourcesController;
 use App\Http\Controllers\LaboratoryController;
+use App\Http\Controllers\TelemedicineSessionController;
 use App\Models\WaitingList;
 use Illuminate\Http\Request;
 use Illuminate\Broadcasting\BroadcastController;
@@ -41,6 +42,31 @@ Route::group(['prefix' => 'v1'], function () {
     Route::post('/forgot-password', [AuthController::class, 'forgotPassword']);
     Route::post('/reset-password', [AuthController::class, 'resetPassword'])->name('resetpasswordfield');
     Route::post('/logout', [AuthController::class, 'destroy'])->name('logout');
+});
+
+Route::group(['prefix' => 'patient/v1'], function () {
+    // Patient public routes
+    Route::post('/register', [AuthController::class, 'patientRegister']);
+    Route::post('/login', [AuthController::class, 'patientLogin']);
+    Route::post('/forgot-password', [AuthController::class, 'forgotPassword']);
+    Route::post('/reset-password', [AuthController::class, 'resetPassword']);
+});
+
+Route::middleware('auth:sanctum')->prefix('patient/v1')->group(function () {
+    Route::get('/user', [AuthController::class, 'user']);
+    Route::post('/logout', [AuthController::class, 'destroy']);
+    Route::get('/dashboard/stats', [LaboratoryController::class, 'patientDashboardStats']);
+    Route::get('/orders', [LaboratoryController::class, 'index']);
+    Route::get('/orders/{id}', [LaboratoryController::class, 'show']);
+
+    // Telemedicine Sessions
+    Route::get('/doctors', [TelemedicineSessionController::class, 'doctors']);
+    Route::post('/sessions', [TelemedicineSessionController::class, 'store']);
+    Route::get('/sessions', [TelemedicineSessionController::class, 'patientSessions']);
+    Route::get('/sessions/{id}', [TelemedicineSessionController::class, 'show']);
+    Route::get('/sessions/{id}/messages', [TelemedicineSessionController::class, 'messages']);
+    Route::post('/sessions/{id}/messages', [TelemedicineSessionController::class, 'sendMessage']);
+    Route::post('/sessions/{id}/call/signal', [TelemedicineSessionController::class, 'sendCallSignal']);
 });
 
 Route::middleware('auth:sanctum')->prefix('v1/')->group(function () {
@@ -256,5 +282,15 @@ Route::middleware('auth:sanctum')->prefix('v1')->group(function () {
         Route::post('/results', [LaboratoryController::class, 'resultsStore']);
         Route::get('/results/{id}', [LaboratoryController::class, 'resultsShow']);
         Route::put('/results/{id}', [LaboratoryController::class, 'resultsUpdate']);
+    });
+
+    // Telemedicine
+    Route::prefix('telemedicine')->group(function () {
+        Route::get('/sessions', [TelemedicineSessionController::class, 'doctorSessions']);
+        Route::get('/sessions/{id}', [TelemedicineSessionController::class, 'show']);
+        Route::get('/sessions/{id}/messages', [TelemedicineSessionController::class, 'messages']);
+        Route::post('/sessions/{id}/messages', [TelemedicineSessionController::class, 'sendMessage']);
+        Route::post('/sessions/{id}/end', [TelemedicineSessionController::class, 'end']);
+        Route::post('/sessions/{id}/call/signal', [TelemedicineSessionController::class, 'sendCallSignal']);
     });
 });
