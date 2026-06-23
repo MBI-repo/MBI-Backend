@@ -99,19 +99,18 @@ Route::middleware('auth:sanctum')->prefix('v1/notification')->as('notification.'
 });
 
 
-    Route::middleware('auth:sanctum')->prefix('v1')->group(function () {
-        //this is for the cron job to send event reminders one day before events
-        Route::post('/events/send-reminders', function () {
-            Artisan::call('events:send-reminders');
+Route::middleware('auth:sanctum')->prefix('v1')->group(function () {
+    //this is for the cron job to send event reminders one day before events
+    Route::post('/events/send-reminders', function () {
+        Artisan::call('events:send-reminders');
 
-            return response()->json([
-                'success' => true,
-                'message' => 'Event reminders processed successfully.',
-                'output' => Artisan::output(),
-            ]);
-        });
-       
+        return response()->json([
+            'success' => true,
+            'message' => 'Event reminders processed successfully.',
+            'output' => Artisan::output(),
+        ]);
     });
+});
 
 
 //Route::middleware('auth:sanctum')->prefix('notification')->as('notification.')->group(function () {
@@ -175,7 +174,6 @@ Route::prefix('v1')->group(function () {
     Route::get('/products', [ProductsController::class, 'index']);
     Route::get('/products/donation', [ProductsController::class, 'donationProduct']);
     Route::get('/products/{id}', [ProductsController::class, 'show']);
-    
 });
 
 
@@ -210,6 +208,7 @@ Route::middleware('auth:sanctum')->prefix('v1')->group(function () {
     // Pusher/Echo private channel auth endpoints (aliases for Laravel broadcasting auth)
     // These resolve 404s when the frontend is configured to call `/api/v1/api/pusher/auth`
     // or `/api/v1/broadcasting/auth` for joining private/presence channels.
+    Route::post('/api/v1/api/pusher/auth', [BroadcastController::class, 'authenticate']);
     Route::post('/api/pusher/auth', [BroadcastController::class, 'authenticate']);
     Route::post('/broadcasting/auth', [BroadcastController::class, 'authenticate']);
 
