@@ -142,6 +142,14 @@ class AuthController extends Controller
             ], 403);
         }
 
+        // Block patient accounts from accessing the medical portal
+        if ($user->user_type === 'patient') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Access denied. Patient accounts must log in through the patient portal.'
+            ], 403);
+        }
+
         // Ensure image field is an absolute URL in response
         if (!empty($user->image)) {
             $user->setAttribute('image', $this->toAbsoluteUrl($user->image));

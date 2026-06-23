@@ -502,6 +502,13 @@ class TelemedicineSessionController extends Controller
         if (\Illuminate\Support\Str::startsWith($path, ['http://', 'https://'])) {
             return $path;
         }
+        // In production the files live under a sub-directory served by the web server.
+        // Set BACKEND_PUBLIC_FILES_URL in your production .env to the public web-accessible
+        // root, e.g. https://api.mybridgeinternational.org/mybridge-backend-files/public
+        $filesBase = rtrim(env('BACKEND_PUBLIC_FILES_URL', ''), '/');
+        if ($filesBase && \Illuminate\Support\Str::startsWith($path, '/uploads/')) {
+            return $filesBase . $path;
+        }
         return url($path);
     }
 }
