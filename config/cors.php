@@ -25,7 +25,7 @@ return [
         'https://www.main.dx2vvqpb31tcm.amplifyapp.com',
         'https://www.portal.mybridgeinternational.org',
         'https://portal.mybridgeinternational.org',
-        'https://patient.mybridgeinternational.org',
+        'https://telemedicine.mybridgeinternational.org',
         'http://localhost:3000',
         'http://127.0.0.1:3000',
         'http://localhost:3001',
