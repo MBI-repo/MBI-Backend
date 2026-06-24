@@ -167,7 +167,7 @@
         <td align="center">
             <table class="container" width="100%">
 
-                @if(isset($user->user_type) && $user->user_type === 'patient')
+                @if((isset($user->user_type) && $user->user_type === 'patient') || (isset($user->category) && $user->category === 'patient'))
                 {{-- ========== PATIENT EMAIL ========== --}}
 
                 <!-- Patient Header -->

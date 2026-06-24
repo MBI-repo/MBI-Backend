@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Mail\WelcomeMail;
+use App\Mail\MedicalWelcomeMail;
 use App\Models\Event;
 use App\Models\Message;
 use App\Models\Connection;
@@ -92,7 +93,11 @@ class AuthController extends Controller
 
         // Send welcome email (non-blocking for response)
         try {
-            Mail::to($user->email)->send(new WelcomeMail($user));
+            if ($user->category === 'patient') {
+                Mail::to($user->email)->send(new WelcomeMail($user));
+            } else {
+                Mail::to($user->email)->send(new MedicalWelcomeMail($user));
+            }
         } catch (\Throwable $mailException) {
             // Swallow mail exceptions to avoid blocking registration
         }
@@ -527,7 +532,11 @@ class AuthController extends Controller
 
         // Send welcome email (non-blocking for response)
         try {
-            Mail::to($user->email)->send(new WelcomeMail($user));
+            if ($user->category === 'patient') {
+                Mail::to($user->email)->send(new WelcomeMail($user));
+            } else {
+                Mail::to($user->email)->send(new MedicalWelcomeMail($user));
+            }
         } catch (\Throwable $mailException) {
             // Swallow mail exceptions to avoid blocking registration
         }
