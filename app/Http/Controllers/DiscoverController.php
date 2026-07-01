@@ -60,11 +60,10 @@ class DiscoverController extends Controller
 
             // Discover = users not in excludeIds
             // Select minimal fields needed by UI (including uuid & image)
-            $users = User::whereNotIn('id', $excludeIds)
-                ->select('id', 'uuid', 'full_name', 'email', 'specialisation', 'institution', 'category', 'image')
+            // $users = User::whereNotIn('id', $excludeIds)
+            $users = User::select('id', 'uuid', 'full_name', 'email', 'specialisation', 'institution', 'category', 'image')
                 ->orderBy('full_name', 'asc')
                 ->get();
-            return true;
             return response()->json([
                 'status' => true,
                 'message' => 'Discover list.',
