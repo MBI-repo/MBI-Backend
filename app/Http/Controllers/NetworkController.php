@@ -20,9 +20,9 @@ class NetworkController extends Controller
 
             // --- 1. Accepted connections ---
             $acceptedConnectionsCount = Connection::where(function ($q) use ($authUser) {
-                    $q->where('sender_id', $authUser->id)
-                      ->orWhere('receiver_id', $authUser->id);
-                })
+                $q->where('sender_id', $authUser->id)
+                    ->orWhere('receiver_id', $authUser->id);
+            })
                 ->where('status', 'accepted')
                 ->count();
 
@@ -48,9 +48,9 @@ class NetworkController extends Controller
                 ->toArray();
 
             $acceptedMutual = Connection::where(function ($q) use ($authUser) {
-                    $q->where('sender_id', $authUser->id)
-                      ->orWhere('receiver_id', $authUser->id);
-                })
+                $q->where('sender_id', $authUser->id)
+                    ->orWhere('receiver_id', $authUser->id);
+            })
                 ->where('status', 'accepted')
                 ->get()
                 ->flatMap(function ($c) use ($authUser) {
@@ -67,6 +67,7 @@ class NetworkController extends Controller
             ));
 
             $discoverableCount = User::whereNotIn('id', $excludeIds)->count();
+            return true;
 
             // Return response
             return response()->json([
@@ -79,7 +80,6 @@ class NetworkController extends Controller
                     'discoverable_users_total' => $discoverableCount,
                 ]
             ], 200);
-
         } catch (\Exception $e) {
             return response()->json([
                 'status' => false,
