@@ -67,7 +67,7 @@ class NetworkController extends Controller
             ));
 
             $discoverableCount = User::whereNotIn('id', $excludeIds)->count();
-            return true;
+
 
             // Return response
             return response()->json([

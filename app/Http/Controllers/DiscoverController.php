@@ -11,7 +11,7 @@ use Illuminate\Support\Facades\DB;
 
 class DiscoverController extends Controller
 {
-    
+
     public function view(Request $request)
     {
         try {
@@ -39,9 +39,9 @@ class DiscoverController extends Controller
 
             // 3) IDs of accepted connections (other party ids)
             $accepted = Connection::where(function ($q) use ($authId) {
-                    $q->where('sender_id', $authId)
-                      ->orWhere('receiver_id', $authId);
-                })
+                $q->where('sender_id', $authId)
+                    ->orWhere('receiver_id', $authId);
+            })
                 ->where('status', 'accepted')
                 ->get()
                 ->flatMap(function ($connection) use ($authId) {
@@ -64,13 +64,12 @@ class DiscoverController extends Controller
                 ->select('id', 'uuid', 'full_name', 'email', 'specialisation', 'institution', 'category', 'image')
                 ->orderBy('full_name', 'asc')
                 ->get();
-
+            return true;
             return response()->json([
                 'status' => true,
                 'message' => 'Discover list.',
                 'data' => $users
             ], 200);
-
         } catch (\Exception $e) {
             return response()->json([
                 'status' => false,
@@ -87,9 +86,19 @@ class DiscoverController extends Controller
     {
         try {
             $user = User::select(
-                    'id','uuid','full_name','email','phone','category','specialisation',
-                    'institution','license_number','approval_status','status','image'
-                )->where('uuid', $uuid)->first();
+                'id',
+                'uuid',
+                'full_name',
+                'email',
+                'phone',
+                'category',
+                'specialisation',
+                'institution',
+                'license_number',
+                'approval_status',
+                'status',
+                'image'
+            )->where('uuid', $uuid)->first();
 
             if (! $user) {
                 return response()->json([
@@ -103,7 +112,6 @@ class DiscoverController extends Controller
                 'message' => 'User profile retrieved.',
                 'data' => $user
             ], 200);
-
         } catch (\Exception $e) {
             return response()->json([
                 'status' => false,
@@ -149,8 +157,8 @@ class DiscoverController extends Controller
 
             // Check for existing connection (either direction)
             $exists = Connection::where(function ($q) use ($senderId, $receiverId) {
-                    $q->where('sender_id', $senderId)->where('receiver_id', $receiverId);
-                })
+                $q->where('sender_id', $senderId)->where('receiver_id', $receiverId);
+            })
                 ->orWhere(function ($q) use ($senderId, $receiverId) {
                     $q->where('sender_id', $receiverId)->where('receiver_id', $senderId);
                 })
@@ -164,7 +172,7 @@ class DiscoverController extends Controller
             }
 
             // Create new pending invitation inside a transaction
-           $connection = DB::transaction(function () use ($senderId, $receiverId, $authUser, $target) {
+            $connection = DB::transaction(function () use ($senderId, $receiverId, $authUser, $target) {
                 $connection = Connection::create([
                     'sender_id'   => $senderId,
                     'receiver_id' => $receiverId,
@@ -189,9 +197,9 @@ class DiscoverController extends Controller
                 'message' => 'Connection request sent.',
                 'data' => [
                     'connection_id' => $connection->id,
-                    'connection_status' => 'pending_sent']
+                    'connection_status' => 'pending_sent'
+                ]
             ], 201);
-
         } catch (\Exception $e) {
             return response()->json([
                 'status' => false,
