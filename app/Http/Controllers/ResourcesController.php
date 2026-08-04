@@ -26,8 +26,10 @@ class ResourcesController extends Controller
             $query->where('publication_year', (int) $request->query('year'));
         }
 
+        $isMine = false;
         if ($scope = $request->query('scope')) {
             if ($scope === 'mine') {
+                $isMine = true;
                 $user = Auth::guard('sanctum')->user();
                 if ($user) {
                     $query->where('user_id', $user->id);
@@ -35,6 +37,10 @@ class ResourcesController extends Controller
                     $query->whereNull('user_id');
                 }
             }
+        }
+
+        if (!$isMine) {
+            $query->where('status', 'approved');
         }
 
         if ($search = $request->query('q')) {
@@ -98,8 +104,10 @@ class ResourcesController extends Controller
             $query->where('publication_year', (int) $request->query('year'));
         }
 
+        $isMine = false;
         if ($scope = $request->query('scope')) {
             if ($scope === 'mine') {
+                $isMine = true;
                 $user = Auth::guard('sanctum')->user();
                 if ($user) {
                     $query->where('user_id', $user->id);
@@ -107,6 +115,10 @@ class ResourcesController extends Controller
                     $query->whereNull('user_id');
                 }
             }
+        }
+
+        if (!$isMine && !$request->query('status')) {
+            $query->where('status', 'approved');
         }
 
         if ($status = $request->query('status')) {
@@ -289,11 +301,12 @@ class ResourcesController extends Controller
                 $documentPath = $file->store('journals', 'public');
             }
 
+            $isAutoApproved = $user->email === 'john@ebme.org';
             $journal = Journals::create([
                 'user_id' => $user->id,
                 'title' => $data['title'],
                 'slug' => $slug,
-                'status' => 'pending',
+                'status' => $isAutoApproved ? 'approved' : 'pending',
                 'publication_year' => $data['publication_year'] ?? null,
                 'authors' => $data['authors'] ?? null,
                 'access_type' => $data['access_type'],
@@ -453,11 +466,12 @@ class ResourcesController extends Controller
 
         $slug = $this->generateUniqueSlugForArticles($data['title']);
 
+        $isAutoApproved = $user->email === 'john@ebme.org';
         $article = Articles::create([
             'user_id' => $user->id,
             'title' => $data['title'],
             'slug' => $slug,
-            'status' => 'pending',
+            'status' => $isAutoApproved ? 'approved' : 'pending',
             'publication_year' => $data['publication_year'] ?? null,
             'authors' => $data['authors'] ?? null,
             'access_type' => $data['access_type'],
@@ -781,12 +795,10 @@ class ResourcesController extends Controller
             $query->where('access_type', $accessType);
         }
 
-        if ($status = $request->query('status')) {
-            $query->where('status', $status);
-        }
-
+        $isMine = false;
         if ($scope = $request->query('scope')) {
             if ($scope === 'mine') {
+                $isMine = true;
                 $user = Auth::guard('sanctum')->user();
                 if ($user) {
                     $query->where('user_id', $user->id);
@@ -794,6 +806,14 @@ class ResourcesController extends Controller
                     $query->whereNull('user_id');
                 }
             }
+        }
+
+        if (!$isMine && !$request->query('status')) {
+            $query->where('status', 'approved');
+        }
+
+        if ($status = $request->query('status')) {
+            $query->where('status', $status);
         }
 
         if ($search = $request->query('q')) {
@@ -962,6 +982,7 @@ class ResourcesController extends Controller
             $documentPath = $request->file('document')->store('rd/documents', 'public');
         }
 
+        $isAutoApproved = $user->email === 'john@ebme.org';
         $rd = ResearchAndDevelopment::create([
             'user_id' => $user->id,
             'title' => $data['title'],
@@ -980,7 +1001,7 @@ class ResourcesController extends Controller
             'data_sources' => $data['data_sources'] ?? null,
             'external_url' => $data['external_url'] ?? null,
             'document_path' => $documentPath,
-            'status' => $data['status'] ?? 'draft',
+            'status' => $isAutoApproved ? 'approved' : ($data['status'] ?? 'draft'),
             'access_type' => $data['access_type'] ?? 'general',
             'clinical_phase' => $data['clinical_phase'] ?? null,
             'peer_review' => $data['peer_review'] ?? null,

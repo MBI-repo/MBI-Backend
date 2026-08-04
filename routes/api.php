@@ -42,6 +42,8 @@ Route::group(['prefix' => 'v1'], function () {
     Route::post('/forgot-password', [AuthController::class, 'forgotPassword']);
     Route::post('/reset-password', [AuthController::class, 'resetPassword'])->name('resetpasswordfield');
     Route::post('/logout', [AuthController::class, 'destroy'])->name('logout');
+    // Email verification — public (link clicked from email)
+    Route::post('/email/verify', [AuthController::class, 'verifyEmail']);
 });
 
 Route::group(['prefix' => 'patient/v1'], function () {
@@ -73,6 +75,8 @@ Route::middleware('auth:sanctum')->prefix('v1/')->group(function () {
     Route::get('/fetch-user', [AuthController::class, 'user'])->name('fetchUser');
     Route::post('/update-user', [AuthController::class, 'update'])->name('updateUser');
     Route::get('/profile/completion', [ProfileController::class, 'profileCompletion'])->name('profile_completion');
+    // Email verification — authenticated (resend)
+    Route::post('/email/resend', [AuthController::class, 'resendVerificationEmail']);
 });
 
 

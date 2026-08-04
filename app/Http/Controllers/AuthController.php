@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Mail\WelcomeMail;
+use App\Mail\VerifyEmailMail;
 use App\Mail\MedicalWelcomeMail;
 use App\Models\Event;
 use App\Models\Message;
@@ -99,6 +100,21 @@ class AuthController extends Controller
                 Mail::to($user->email)->send(new MedicalWelcomeMail($user));
             }
         } catch (\Throwable $mailException) {
+            // Swallow mail exceptions to avoid blocking registration
+        }
+
+        // Send verification email
+        try {
+            $expiry      = now()->addMinutes(60)->timestamp;
+            $verifyHash  = hash('sha256', $user->email . $user->id . config('app.key'));
+            $verifyToken = $expiry . '|' . $verifyHash;
+            $user->remember_token = $verifyToken;
+            $user->save();
+
+            $frontendUrl = rtrim(env('FRONTEND_URL', 'http://localhost:3000'), '/');
+            $verificationUrl = $frontendUrl . '/verify-email?token=' . urlencode($verifyHash) . '&email=' . urlencode($user->email);
+            Mail::to($user->email)->send(new VerifyEmailMail($user, $verificationUrl));
+        } catch (\Throwable $verifyMailException) {
             // Swallow mail exceptions to avoid blocking registration
         }
 
@@ -610,6 +626,127 @@ class AuthController extends Controller
                 'access_token' => $token,
                 'token_type' => 'Bearer',
             ]
+        ]);
+    }
+
+    /**
+     * Verify email using token.
+     * Public route: POST /v1/email/verify
+     */
+    public function verifyEmail(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'token' => 'required|string',
+            'email' => 'required|email',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation errors',
+                'errors'  => $validator->errors(),
+            ], 422);
+        }
+
+        $user = User::where('email', $request->email)->first();
+
+        if (!$user) {
+            return response()->json([
+                'success' => false,
+                'message' => 'User not found.',
+            ], 404);
+        }
+
+        if ($user->email_verified_at) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Email is already verified.',
+            ]);
+        }
+
+        // Validate token: stored as "timestamp|hash" in remember_token
+        $stored = $user->remember_token;
+        if (!$stored || !str_contains($stored, '|')) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Invalid or expired verification link. Please request a new one.',
+            ], 400);
+        }
+
+        [$expiry, $hash] = explode('|', $stored, 2);
+
+        // Check expiry (60 minutes)
+        if (now()->timestamp > (int) $expiry) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Verification link has expired. Please request a new one.',
+            ], 400);
+        }
+
+        $expected = hash('sha256', $user->email . $user->id . config('app.key'));
+
+        if (!hash_equals($expected, $hash)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Invalid verification token.',
+            ], 400);
+        }
+
+        $user->email_verified_at = now();
+        $user->remember_token = null;
+        $user->save();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Email verified successfully! You can now access your dashboard.',
+        ]);
+    }
+
+    /**
+     * Resend verification email.
+     * Authenticated route: POST /v1/email/resend
+     */
+    public function resendVerificationEmail(Request $request)
+    {
+        $user = $request->user();
+
+        if (!$user) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthenticated.',
+            ], 401);
+        }
+
+        if ($user->email_verified_at) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Your email is already verified.',
+            ]);
+        }
+
+        // Generate a new token: expiry|hash
+        $expiry = now()->addMinutes(60)->timestamp;
+        $hash   = hash('sha256', $user->email . $user->id . config('app.key'));
+        $token  = $expiry . '|' . $hash;
+
+        $user->remember_token = $token;
+        $user->save();
+
+        $frontendUrl = rtrim(env('FRONTEND_URL', 'http://localhost:3000'), '/');
+        $verificationUrl = $frontendUrl . '/verify-email?token=' . urlencode($hash) . '&email=' . urlencode($user->email);
+
+        try {
+            Mail::to($user->email)->send(new VerifyEmailMail($user, $verificationUrl));
+        } catch (\Throwable $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to send verification email. Please try again later.',
+            ], 500);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Verification email sent! Please check your inbox.',
         ]);
     }
 }
