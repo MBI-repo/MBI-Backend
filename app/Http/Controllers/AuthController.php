@@ -379,7 +379,18 @@ class AuthController extends Controller
         if (Str::startsWith($path, ['http://', 'https://'])) {
             return $path;
         }
-        return rtrim('https://api.mybridgeinternational.org/mybridge-backend-files/public', '/') . $path;
+
+        $relative = ltrim(str_replace('/storage/', '', $path), '/');
+
+        if ($storageBase = env('STORAGE_BASE_URL')) {
+            return rtrim($storageBase, '/') . '/' . $relative;
+        }
+
+        if (request()) {
+            return rtrim(request()->getSchemeAndHttpHost(), '/') . '/storage/' . $relative;
+        }
+
+        return rtrim(env('APP_URL', 'http://127.0.0.1:8000'), '/') . '/storage/' . $relative;
     }
 
     public function forgotPassword(Request $request)

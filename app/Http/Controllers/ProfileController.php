@@ -133,8 +133,6 @@ class ProfileController extends Controller
             }
 
 
-            $base_url = "https://api.mybridgeinternational.org/mybridge-backend-files/storage/app/public/";
-
             return response()->json([
                 'status'  => true,
                 'message' => 'Account information updated successfully.',
@@ -142,7 +140,7 @@ class ProfileController extends Controller
                     'uuid'               => $user->uuid,
                     'full_name'          => $user->full_name,
                     'email'              => $user->email,
-                    'image' =>  $base_url . $user->image,
+                    'image'              => $this->resolveUserImageUrl($user->image),
                 ],
             ], 200);
         } catch (\Exception $e) {
@@ -167,7 +165,7 @@ class ProfileController extends Controller
             }
 
             $validator = Validator::make($request->all(), [
-                'avatar' => ['required', 'image', 'mimes:jpeg,jpg,png,gif,webp', 'max:2048'],
+                'avatar' => ['required', 'image', 'mimes:jpeg,jpg,png,gif,webp,heic', 'max:10240'],
             ]);
 
             if ($validator->fails()) {
@@ -211,9 +209,8 @@ class ProfileController extends Controller
             ]);
 
 
-            // Build full public URL for frontend (base must match live server asset location)
-            $Base_Url = rtrim('https://api.mybridgeinternational.org/mybridge-backend-files/storage/app/public/', '/');
-            $fullUrl = $Base_Url . '/' . $relativePath;
+            // Build resolved URL for updated avatar
+            $fullUrl = $this->resolveUserImageUrl($user->image);
 
             return response()->json([
                 'status'  => true,
@@ -235,22 +232,31 @@ class ProfileController extends Controller
 
     /**
      * Use this helper when returning user profiles elsewhere.
-     * It returns the absolute URL for the user's image, or the default image URL if none exists.
+     * It returns the absolute URL for the user's image, or null if none exists.
      */
-    private function resolveUserImageUrl(?string $storedPath): string
+    private function resolveUserImageUrl(?string $storedPath): ?string
     {
-        // Storage-served images
-        $Base_Url = rtrim('https://api.mybridgeinternational.org/mybridge-backend-files/storage/app/public/', '/');
-
-        if (! empty($storedPath) && str_starts_with($storedPath, '/storage/profile_photos/')) {
-            // storedPath = "/storage/profile_photos/xxx.jpg" -> relative = profile_photos/xxx.jpg
-            $relative = ltrim(str_replace('/storage/', '', $storedPath), '/');
-            return $Base_Url . '/' . $relative;
+        if (empty($storedPath)) {
+            return null;
         }
 
-        // Default image located in public/defaults/default-avatar.png
-        $publicBase = rtrim('https://api.mybridgeinternational.org/mybridge-backend-files/public', '/');
-        return $publicBase . '/defaults/default-avatar.png';
+        if (str_starts_with($storedPath, 'http://') || str_starts_with($storedPath, 'https://')) {
+            return $storedPath;
+        }
+
+        $relative = ltrim(str_replace('/storage/', '', $storedPath), '/');
+
+        // Allow overriding storage base URL via STORAGE_BASE_URL env (e.g. on production)
+        if ($storageBase = env('STORAGE_BASE_URL')) {
+            return rtrim($storageBase, '/') . '/' . $relative;
+        }
+
+        // Dynamically use scheme and host from request if available (local dev or production)
+        if (request()) {
+            return rtrim(request()->getSchemeAndHttpHost(), '/') . '/storage/' . $relative;
+        }
+
+        return rtrim(env('APP_URL', 'http://127.0.0.1:8000'), '/') . '/storage/' . $relative;
     }
 
 

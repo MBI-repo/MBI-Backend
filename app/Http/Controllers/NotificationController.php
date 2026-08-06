@@ -115,28 +115,26 @@ class NotificationController extends Controller
         return Carbon::parse($date)->diffForHumans(['short' => true,]);
     }
 
-    private function resolveUserImageUrl(?string $storedPath): string
+    private function resolveUserImageUrl(?string $storedPath): ?string
     {
-        $baseUrl = rtrim(
-            'https://api.mybridgeinternational.org/mybridge-backend-files/storage/app/public/',
-            '/'
-        );
-        if (! empty($storedPath)
-            && str_starts_with($storedPath, '/storage/profile_photos/')
-        ) {
-            $relative = ltrim(
-                str_replace('/storage/', '', $storedPath),
-                '/'
-            );
-            return $baseUrl . '/' . $relative;
+        if (empty($storedPath)) {
+            return null;
         }
-        
 
-        // Default avatar
-        $publicBase = rtrim(
-            'https://api.mybridgeinternational.org/mybridge-backend-files/public',
-            '/'
-        );
-        return $publicBase . '/defaults/default-avatar.png';
+        if (str_starts_with($storedPath, 'http://') || str_starts_with($storedPath, 'https://')) {
+            return $storedPath;
+        }
+
+        $relative = ltrim(str_replace('/storage/', '', $storedPath), '/');
+
+        if ($storageBase = env('STORAGE_BASE_URL')) {
+            return rtrim($storageBase, '/') . '/' . $relative;
+        }
+
+        if (request()) {
+            return rtrim(request()->getSchemeAndHttpHost(), '/') . '/storage/' . $relative;
+        }
+
+        return rtrim(env('APP_URL', 'http://127.0.0.1:8000'), '/') . '/storage/' . $relative;
     }
 }
