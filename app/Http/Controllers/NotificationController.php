@@ -20,7 +20,7 @@ class NotificationController extends Controller
                 ], 401);
             }
             $notifications = Notification::with('sender')->where('receiver_id', $user->uuid)->latest()->limit(50)->get();
-             $data = $notifications->map(function ($item) {
+            $data = $notifications->map(function ($item) {
                 return [
                     'id' => $item->id,
                     'title' => $item->title,
@@ -67,13 +67,12 @@ class NotificationController extends Controller
                 'status'  => true,
                 'message' => 'Notification marked as read',
             ]);
-         } 
-         catch (\Throwable $e) {
+        } catch (\Throwable $e) {
             return response()->json([
                 'status'  => false,
                 'message' => 'Error: ' . $e->getMessage(),
             ], 500);
-         }
+        }
     }
 
     public function markAllAsRead(Request $request)
@@ -81,7 +80,7 @@ class NotificationController extends Controller
         try {
             $user = $request->user();
             Notification::where('receiver_id', $user->uuid)->where('is_read', false)->update(['is_read' => true,]);
-            
+
             return response()->json([
                 'status' => true,
                 'message' => 'All notifications marked as read',
@@ -104,9 +103,8 @@ class NotificationController extends Controller
             }
             $notification->delete();
             return response()->json(['status' => true, 'message' => 'Notification deleted.'], 200);
-
         } catch (\Throwable $e) {
-            return response()->json(['status' => false, 'message' => 'Error: '.$e->getMessage()], 500);
+            return response()->json(['status' => false, 'message' => 'Error: ' . $e->getMessage()], 500);
         }
     }
 
