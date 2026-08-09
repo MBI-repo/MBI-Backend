@@ -123,16 +123,13 @@ class NotificationController extends Controller
             return $storedPath;
         }
 
-        $relative = ltrim(str_replace('/storage/', '', $storedPath), '/');
+        $relative = ltrim(str_replace(['/storage/app/public/', '/storage/'], '', $storedPath), '/');
 
-        if ($storageBase = env('STORAGE_BASE_URL')) {
-            return rtrim($storageBase, '/') . '/' . $relative;
-        }
+        $baseUrl = env(
+            'STORAGE_BASE_URL',
+            'https://api.mybridgeinternational.org/mybridge-backend-files/storage/app/public'
+        );
 
-        if (request()) {
-            return rtrim(request()->getSchemeAndHttpHost(), '/') . '/storage/' . $relative;
-        }
-
-        return rtrim(env('APP_URL', 'http://127.0.0.1:8000'), '/') . '/storage/' . $relative;
+        return rtrim($baseUrl, '/') . '/' . $relative;
     }
 }

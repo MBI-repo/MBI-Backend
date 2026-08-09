@@ -244,19 +244,14 @@ class ProfileController extends Controller
             return $storedPath;
         }
 
-        $relative = ltrim(str_replace('/storage/', '', $storedPath), '/');
+        $relative = ltrim(str_replace(['/storage/app/public/', '/storage/'], '', $storedPath), '/');
 
-        // Allow overriding storage base URL via STORAGE_BASE_URL env (e.g. on production)
-        if ($storageBase = env('STORAGE_BASE_URL')) {
-            return rtrim($storageBase, '/') . '/' . $relative;
-        }
+        $baseUrl = env(
+            'STORAGE_BASE_URL',
+            'https://api.mybridgeinternational.org/mybridge-backend-files/storage/app/public'
+        );
 
-        // Dynamically use scheme and host from request if available (local dev or production)
-        if (request()) {
-            return rtrim(request()->getSchemeAndHttpHost(), '/') . '/storage/' . $relative;
-        }
-
-        return rtrim(env('APP_URL', 'http://127.0.0.1:8000'), '/') . '/storage/' . $relative;
+        return rtrim($baseUrl, '/') . '/' . $relative;
     }
 
 
