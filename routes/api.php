@@ -75,6 +75,9 @@ Route::middleware('auth:sanctum')->prefix('v1/')->group(function () {
     Route::get('/fetch-user', [AuthController::class, 'user'])->name('fetchUser');
     Route::post('/update-user', [AuthController::class, 'update'])->name('updateUser');
     Route::get('/profile/completion', [ProfileController::class, 'profileCompletion'])->name('profile_completion');
+    Route::get('/user/country', [ProfileController::class, 'getCountry'])->name('getUserCountry');
+    Route::post('/user/country', [ProfileController::class, 'updateCountry'])->name('updateUserCountry');
+    Route::put('/user/country', [ProfileController::class, 'updateCountry']);
     // Email verification — authenticated (resend)
     Route::post('/email/resend', [AuthController::class, 'resendVerificationEmail']);
 });
@@ -84,6 +87,10 @@ Route::middleware('auth:sanctum')->prefix('v1/settings')->as('settings.')->group
     Route::get('/account-info/show', [ProfileController::class, 'showAccount'])->name('account_show');
     Route::put('/account-info/update', [ProfileController::class, 'updateAccount'])->name('account_update');
     Route::any('/account-info/avatar/update', [ProfileController::class, 'updateAvatar'])->name('avatar_update');
+
+    Route::get('/country/show', [ProfileController::class, 'getCountry'])->name('country_show');
+    Route::put('/country/update', [ProfileController::class, 'updateCountry'])->name('country_update');
+    Route::post('/country/save', [ProfileController::class, 'updateCountry'])->name('country_save');
 
     Route::get('/profile/show', [ProfileController::class, 'viewProfile'])->name('profile_show');
     Route::put('/profile/update', [ProfileController::class, 'updateProfile'])->name('profile_update');

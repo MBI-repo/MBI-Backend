@@ -38,6 +38,7 @@ class ProfileController extends Controller
                     'uuid'      => $user->uuid,
                     'full_name' => $user->full_name,
                     'email'     => $user->email,
+                    'country'   => $user->country,
                     'image'     => $imageUrl,
                 ],
             ], 200);
@@ -48,29 +49,82 @@ class ProfileController extends Controller
             ], 500);
         }
     }
-    // public function showAccount()
-    // {
-    //     try {
-    //         $user = Auth::user();
-    //         $base_url = "https://api.mybridgeinternational.org/mybridge-backend-files/storage/app/public/";
-    //         return response()->json([
-    //             'status'  => true,
-    //             'message' => 'Account information fetched successfully.',
-    //             'data'    => [
-    //                 'uuid'                => $user->uuid,
-    //                 'full_name'           => $user->full_name,
-    //                 'email'               => $user->email,
-    //                 'image'               =>  $base_url . $user->image,
-    //             ],
-    //         ], 200);
 
-    //     } catch (\Exception $e) {
-    //         return response()->json([
-    //             'status'  => false,
-    //             'message' => 'Error: ' . $e->getMessage(),
-    //         ], 500);
-    //     }
-    // }
+    /**
+     * Get authenticated user's country
+     */
+    public function getCountry(Request $request)
+    {
+        try {
+            $user = $request->user() ?? User::find(Auth::id());
+            if (! $user) {
+                return response()->json([
+                    'status'  => false,
+                    'message' => 'Authenticated user not found',
+                ], 401);
+            }
+
+            return response()->json([
+                'status'  => true,
+                'message' => 'User country fetched successfully.',
+                'data'    => [
+                    'uuid'    => $user->uuid,
+                    'country' => $user->country,
+                ],
+            ], 200);
+        } catch (\Throwable $e) {
+            return response()->json([
+                'status'  => false,
+                'message' => 'Error: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * Save / update authenticated user's country
+     */
+    public function updateCountry(Request $request)
+    {
+        try {
+            $user = $request->user() ?? User::find(Auth::id());
+            if (! $user) {
+                return response()->json([
+                    'status'  => false,
+                    'message' => 'Authenticated user not found',
+                ], 401);
+            }
+
+            $validator = Validator::make($request->all(), [
+                'country' => ['required', 'string', 'max:255'],
+            ]);
+
+            if ($validator->fails()) {
+                return response()->json([
+                    'status'  => false,
+                    'message' => 'Validation errors',
+                    'errors'  => $validator->errors(),
+                ], 422);
+            }
+
+            $user->country = $request->input('country');
+            $user->save();
+
+            return response()->json([
+                'status'  => true,
+                'message' => 'Country updated successfully.',
+                'data'    => [
+                    'uuid'      => $user->uuid,
+                    'full_name' => $user->full_name,
+                    'country'   => $user->country,
+                ],
+            ], 200);
+        } catch (\Throwable $e) {
+            return response()->json([
+                'status'  => false,
+                'message' => 'Error: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
 
     public function updateAccount(Request $request)
     {
@@ -84,6 +138,7 @@ class ProfileController extends Controller
             }
             $validator = Validator::make($request->all(), [
                 'full_name'    => ['nullable', 'string', 'max:255'],
+                'country'      => ['nullable', 'string', 'max:255'],
                 'old_password' => ['required_with:password', 'string'],
                 'password'     => ['nullable', 'string', 'min:8', 'confirmed'],
             ]);
@@ -97,6 +152,9 @@ class ProfileController extends Controller
             $validated = $validator->validated();
             if (!empty($validated['full_name'])) {
                 $user->full_name = $validated['full_name'];
+            }
+            if (array_key_exists('country', $validated)) {
+                $user->country = $validated['country'];
             }
             if (!empty($validated['password'])) {
                 if (! Hash::check($validated['old_password'], $user->password)) {
@@ -113,6 +171,10 @@ class ProfileController extends Controller
 
             if (!empty($validated['full_name'])) {
                 $updatedFields[] = 'name';
+            }
+
+            if (array_key_exists('country', $validated)) {
+                $updatedFields[] = 'country';
             }
 
             if (!empty($validated['password'])) {
@@ -140,6 +202,7 @@ class ProfileController extends Controller
                     'uuid'               => $user->uuid,
                     'full_name'          => $user->full_name,
                     'email'              => $user->email,
+                    'country'            => $user->country,
                     'image'              => $this->resolveUserImageUrl($user->image),
                 ],
             ], 200);
