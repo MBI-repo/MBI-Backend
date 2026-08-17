@@ -40,6 +40,9 @@ class AuthController extends Controller
             'institution' => 'nullable|string|max:255',
             'license_number' => 'nullable|string|max:255|unique:users',
             'image' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:5120',
+            'country' => 'nullable|string|max:255',
+            'state' => 'nullable|string|max:255',
+            'city' => 'nullable|string|max:255',
         ]);
 
         if ($validator->fails()) {
@@ -61,6 +64,9 @@ class AuthController extends Controller
             'license_number' => $request->license_number,
             'approval_status' => 'pending',
             'status' => 'active',
+            'country' => $request->country,
+            'state' => $request->state,
+            'city' => $request->city,
         ]);
 
         // Optional image upload: store on public disk and persist PATH only
@@ -137,6 +143,9 @@ class AuthController extends Controller
         $validator = Validator::make($request->all(), [
             'email' => 'required|email',
             'password' => 'required',
+            'country' => 'nullable|string|max:255',
+            'state' => 'nullable|string|max:255',
+            'city' => 'nullable|string|max:255',
         ]);
 
         if ($validator->fails()) {
@@ -169,6 +178,24 @@ class AuthController extends Controller
                 'success' => false,
                 'message' => 'Access denied. Patient accounts must log in through the patient portal.'
             ], 403);
+        }
+
+        // Update location if provided
+        $locationUpdated = false;
+        if ($request->filled('country')) {
+            $user->country = $request->country;
+            $locationUpdated = true;
+        }
+        if ($request->filled('state')) {
+            $user->state = $request->state;
+            $locationUpdated = true;
+        }
+        if ($request->filled('city')) {
+            $user->city = $request->city;
+            $locationUpdated = true;
+        }
+        if ($locationUpdated) {
+            $user->save();
         }
 
         // Ensure image field is an absolute URL in response
