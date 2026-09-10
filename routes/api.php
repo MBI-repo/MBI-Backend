@@ -20,7 +20,18 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ResourcesController;
 use App\Http\Controllers\LaboratoryController;
 use App\Http\Controllers\TelemedicineSessionController;
+use App\Http\Controllers\Facilities\AuthController as FacilitiesAuthController;
+use App\Http\Controllers\Facilities\DashboardController as FacilitiesDashboardController;
+use App\Http\Controllers\Facilities\DonorController as FacilitiesDonorController;
+use App\Http\Controllers\Facilities\RequestController as FacilitiesRequestController;
+use App\Http\Controllers\Facilities\ScreenController as FacilitiesScreenController;
+use App\Http\Controllers\Facilities\InventoryController as FacilitiesInventoryController;
+use App\Http\Controllers\Facilities\DonationController as FacilitiesDonationController;
+use App\Http\Controllers\Facilities\DoctorController as FacilitiesDoctorController;
+use App\Http\Controllers\Facilities\PatientController as FacilitiesPatientController;
+use App\Http\Controllers\Facilities\TransfusionController as FacilitiesTransfusionController;
 use App\Models\WaitingList;
+
 use Illuminate\Http\Request;
 use Illuminate\Broadcasting\BroadcastController;
 use Illuminate\Support\Facades\Route;
@@ -33,6 +44,12 @@ use Illuminate\Support\Facades\Notification;
 
 
 
+Route::get('test', function () {
+    return response()->json([
+        'success' => true,
+        'message' => 'API is working',
+    ]);
+});
 
 
 Route::group(['prefix' => 'v1'], function () {
@@ -303,4 +320,108 @@ Route::middleware('auth:sanctum')->prefix('v1')->group(function () {
         Route::post('/sessions/{id}/end', [TelemedicineSessionController::class, 'end']);
         Route::post('/sessions/{id}/call/signal', [TelemedicineSessionController::class, 'sendCallSignal']);
     });
+
 });
+
+    //Facilities Route management
+    Route::prefix('facilities')->group(function (){
+         Route::post('/register/doctor',[FacilitiesAuthController::class, 'registerDoctor']);
+         Route::post('/register/doctor/step-2',[FacilitiesAuthController::class, 'doctorStepTwo']);
+         Route::post('/register/doctor/complete', [FacilitiesAuthController::class, 'completeDoctorRegistration']);
+
+         Route::post('/register/facility',[FacilitiesAuthController::class, 'registerFacility']);
+         Route::post('/register/facility/step-2',[FacilitiesAuthController::class, 'facilityStepTwo']); 
+         Route::post('/register/facility/step-3',[FacilitiesAuthController::class, 'facilityStepThree']);
+         Route::post('/register/facility/complete',[FacilitiesAuthController::class, 'completeFacilityRegistration']);
+
+         Route::post('/login',[FacilitiesAuthController::class, 'login']);
+         Route::post('/forgot-password',[FacilitiesAuthController::class, 'forgotPassword']);
+         Route::post('/verify-otp',[FacilitiesAuthController::class, 'verifyOtp']);
+         Route::post('/reset-password',[FacilitiesAuthController::class, 'resetPassword']);
+         
+         Route::middleware('auth:sanctum')->prefix('bloodbank')->group(function () {
+
+            Route::post('logout', [FacilitiesAuthController::class, 'logout']);
+            Route::get('dashboard', [FacilitiesDashboardController::class, 'index']);
+
+            Route::get('/donors',[FacilitiesDonorController::class, 'index']);
+            Route::post('/donors/{donor_type}/{donor_category}',[FacilitiesDonorController::class, 'createDonor']);
+            Route::put('/donors/{donor_type}/{donor_category}/{uuid}',[FacilitiesDonorController::class, 'updateDonor']);
+            Route::get( '/donors', [FacilitiesDonorController::class, 'getAllDonors'] );
+            Route::get('/donors/{uuid}',[FacilitiesDonorController::class, 'viewDonor']);
+            Route::delete('/donors/{uuid}',[FacilitiesDonorController::class, 'deleteDonor']);
+            Route::get('/donors/email/{uuid}',[FacilitiesDonorController::class, 'emailDonor']);
+            Route::get('/donors/call/{uuid}',[FacilitiesDonorController::class, 'callDonor']);
+
+
+            Route::get('/donations',[FacilitiesDonationController::class, 'getAllDonations']);
+            Route::post('/donations/{uuid}',[FacilitiesDonationController::class, 'recordDonation']);
+            Route::get('/donations/{uuid}',[FacilitiesDonationController::class, 'viewDonation']);
+            Route::put('/donations/{uuid}',[FacilitiesDonationController::class, 'updateDonation']);
+            Route::delete('/donations/{uuid}',[FacilitiesDonationController::class, 'deleteDonation']);
+
+
+            Route::get('/equipment',[FacilitiesDashboardController::class, 'getAllEquipment']);
+            Route::post('/equipment/create',[FacilitiesDashboardController::class, 'addEquipment']);
+            Route::get('/equipment/{uuid}',[FacilitiesDashboardController::class, 'viewEquipment']);
+            Route::put('/equipment/{uuid}',[FacilitiesDashboardController::class, 'updateEquipment']);
+            Route::delete('/equipment/{uuid}',[FacilitiesDashboardController::class, 'deleteEquipment']);
+
+            Route::get('/requests', [FacilitiesRequestController::class, 'index'] );
+            Route::get('/requests/all',[FacilitiesRequestController::class, 'getAllRequests']);
+            Route::get('/requests/{uuid}',[FacilitiesRequestController::class, 'viewRequest']);
+            Route::put('/requests/accept/{uuid}',[FacilitiesRequestController::class, 'acceptRequest']);
+            Route::patch('/requests/reject/{uuid}',[FacilitiesRequestController::class, 'rejectRequest']);
+            Route::delete('/requests/{uuid}',[FacilitiesRequestController::class, 'deleteRequest']);
+
+            Route::get('/screen/{uuid}', [FacilitiesScreenController::class, 'index'] );
+            Route::post('/screen/record/{uuid}',[FacilitiesScreenController::class, 'screenRecord']);
+            Route::get('/screen/record/pending-record',[FacilitiesScreenController::class, 'pendingRecord']);
+            Route::get('/screen/record/view-pending-record/{uuid}',[FacilitiesScreenController::class, 'viewPendingRecord']);
+            Route::post('/screen/record/collect/{uuid}',[FacilitiesScreenController::class, 'collectRecord']);
+            Route::post('/screen/record/collect/lab/{uuid}',[FacilitiesScreenController::class, 'labRecord']);
+            Route::post('/screen/record/collect/lab/component/{uuid}',[FacilitiesScreenController::class, 'componentRecord']);
+            
+            Route::post('/inventory/add/{uuid}',[FacilitiesInventoryController::class, 'addToInventory']);
+            Route::get('/inventory',[FacilitiesInventoryController::class, 'getAllInventory']);
+            Route::get('/inventory/{uuid}',[FacilitiesInventoryController::class, 'viewInventory']);
+            Route::get('/inventory/{uuid}/history',[FacilitiesInventoryController::class, 'getInventoryHistory']);
+            Route::get('/inventory/dashboard/summary',[FacilitiesInventoryController::class, 'inventoryDashboardSummary']);
+            Route::post('/inventory/{uuid}/reserve',[FacilitiesInventoryController::class, 'reserveInventory']);
+            Route::post('/inventory/{uuid}/issue',[FacilitiesInventoryController::class, 'issueInventory']);
+            Route::post('/inventory/{uuid}/return',[FacilitiesInventoryController::class, 'returnInventory']);
+            Route::post('/inventory/{uuid}/discard',[FacilitiesInventoryController::class, 'discardInventory']);
+        });
+
+        Route::middleware('auth:sanctum')->prefix('doctor')->group(function () {
+            Route::post('/logout', [FacilitiesDoctorController::class, 'logout']);
+            Route::get('/dashboard', [FacilitiesDoctorController::class, 'index']);
+
+            Route::get('/patients',[FacilitiesPatientController::class, 'getAllPatients']);
+            Route::get('/patients/{uuid}',[FacilitiesPatientController::class, 'viewPatient']);
+            Route::post('/patients',[FacilitiesPatientController::class, 'createPatient']);
+            Route::put('/patients/{uuid}',[FacilitiesPatientController::class, 'updatePatient']);
+            Route::delete('/patients/{uuid}',[FacilitiesPatientController::class, 'deletePatient']);
+
+            Route::post('/requests',[FacilitiesDoctorController::class, 'createRequest']);
+            Route::get('/requests',[FacilitiesDoctorController::class, 'getHistory']);
+            Route::get('/requests/{uuid}',[FacilitiesDoctorController::class, 'viewRequest']);
+            Route::put('/requests/{uuid}',[FacilitiesDoctorController::class, 'updateRequest']);
+            Route::delete('/requests/{uuid}',[FacilitiesDoctorController::class, 'deleteRequest']);
+
+
+            Route::get('/transfusions',[FacilitiesTransfusionController::class, 'getAllTransfusions']);
+            Route::post('/transfusions', [FacilitiesTransfusionController::class, 'recordTransfusion'] );
+            Route::get('/transfusions/{uuid}',[FacilitiesTransfusionController::class, 'viewTransfusion']);
+            Route::put( '/transfusions/{uuid}', [FacilitiesTransfusionController::class, 'updateTransfusion']);
+            Route::delete('/transfusions/{uuid}',[FacilitiesTransfusionController::class, 'deleteTransfusionRecord']);
+            Route::get('/transfusions/history', [FacilitiesTransfusionController::class, 'transfusionHistory']);
+
+
+            });
+        });
+
+
+    
+
+

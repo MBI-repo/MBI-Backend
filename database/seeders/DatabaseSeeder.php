@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Models\BloodBank;
 use App\Models\User;
 use App\Models\Notification;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
@@ -14,6 +15,18 @@ class DatabaseSeeder extends Seeder
 
     public function run(): void
     {
+         $this->call([
+
+            
+            
+            RoleSeeder::class,
+            BloodbankSeeder::class,
+            ConnectionSeeder::class,
+            LaboratorySeeder::class,
+            PatientSeeder::class,
+            BloodRequestSeeder::class,
+            
+         ]);
         // create 50 random users
         // User::factory()->count(50)->create();
         

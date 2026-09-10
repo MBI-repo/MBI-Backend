@@ -18,6 +18,7 @@ class User extends Authenticatable
         'status',
         'lastSeen',
         'full_name',
+        'role_id',
         'email',
         'phone',
         'password',
@@ -31,12 +32,53 @@ class User extends Authenticatable
         'medical_licence',
         'isSeller',
         'kyc_verified_at',
+        'registration_step',
+        'registration_status',
         'gender',
         'dob',
         'city',
         'state',
         'user_type',
     ];
+
+    public function role()
+    {
+        return $this->belongsTo(Role::class);
+    }
+
+    public function doctorProfile()
+    {
+        return $this->hasOne(DoctorProfile::class, 'user_uuid', 'uuid');
+    }
+
+    public function facility()
+    {
+        return $this->hasOne(Facility::class, 'user_uuid', 'uuid');
+    }
+    public function patient()
+    {
+        return $this->hasOne(Patient::class, 'user_uuid', 'uuid');
+    }
+
+    public function bloodBank()
+    {
+        return $this->hasOne(BloodBank::class, 'user_uuid', 'uuid');
+    }
+
+    public function otpVerifications()
+    {
+        return $this->hasMany(OtpVerification::class, 'user_uuid', 'uuid');
+    }
+    
+    public function bloodCollections()
+    {
+        return $this->hasMany(
+            BloodCollection::class,
+            'collected_by_uuid',
+            'uuid'
+        );
+    }
+    
 
     public function sentConnections()
     {
