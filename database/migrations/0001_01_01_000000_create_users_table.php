@@ -13,10 +13,10 @@ return new class extends Migration
     {
         Schema::create('users', function (Blueprint $table) {
             $table->id();
+            $table->foreignid('role_id')->nullable()->constrained('roles')->nullOnDelete();
             $table->string('full_name');
             $table->string('email')->unique();
             $table->string('phone')->unique()->nullable();
-            $table->string('image')->nullable();
             $table->timestamp('email_verified_at')->nullable();
             $table->string('password');
             $table->string('category')->nullable();
@@ -27,6 +27,9 @@ return new class extends Migration
             $table->string('license_number')->unique()->nullable();
             $table->enum('approval_status', ['pending', 'approved', 'rejected'])->default('pending');
             $table->enum('status', ['active', 'inactive'])->default('active');
+            //used by facilities
+            $table->string('registration_status')->default('incomplete');
+            $table->unsignedTinyInteger('registration_step')->default(1);
             $table->rememberToken();
             $table->timestamps();
         });
